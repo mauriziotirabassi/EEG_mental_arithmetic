@@ -1,2 +1,0 @@
-You are provided with 1 overnight single lead EEG recording acquired at 512 Hz in an adult subject (27 years old). The signal is recorded using the Epilog produced by Epitel company, Salt Lake City, UT, USA (https://www.epitel.com/). The device was place on the right side of the forehead.
-Try to detect the different stages of sleep based on changes in the EEG signal characteristics.
