@@ -1,0 +1,9 @@
+If you WANT you can use the EEGLAB Toolbox
+
+	https://sccn.ucsd.edu/eeglab/index.php
+	https://uk.mathworks.com/matlabcentral/fileexchange/56415-eeglab?requestedDomain=
+
+The toolbox provides a lot of high-quality software running on MATLAB for standard and advanced analysis of EEG signals. 
+Mind thay its use is not compulsory for the project. I recommend using it especially if you want to learn more on EEG analysis (for example, it can be very useful if you intend to do your thesis on this topic).
+
+I have also uploaded the function "topoplot" and some other functions necessary to use it so that you can do topoplots (topographic maps) withouth having to use the toolbox itself
