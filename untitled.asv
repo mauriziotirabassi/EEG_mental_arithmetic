@@ -2,8 +2,8 @@ clear all ; close all ; clc ;
 
 %TODO: implement matrices ds
 
-% per MATTIA cambiare la drectory: /Users/mattiapezzano/Documents/GitHub/proj-bsp-2023/Documentation/Data/Subject0
-% per MAURIZIO cambiare la directory: Documentation\Data\Subject0
+% per Mattia cambiare la drectory: /Users/mattiapezzano/Documents/GitHub/proj-bsp-2023/Documentation/Data/Subject0
+% per Maurizio cambiare la directory: Documentation\Data\Subject0
 
 
 
