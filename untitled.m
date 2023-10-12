@@ -6,21 +6,26 @@ Fs = 500;
 %Iteration from the last element is relevant for dynamic memory allocation
 
 %TODO: when using MACOS explicit the full length path: 
-% /Users/mattiapezzano/Documents/GitHub/proj-bsp-2023/Documentation/Data/
-myFiles = dir("Documentation\Data\*.mat");
+
+path="/Users/mattiapezzano/Documents/GitHub/proj-bsp-2023/Documentation/Data/";
+
+% path="Documentation\Data\";
+
+
+myFiles = dir(strcat(path,"*.mat"));
 
 %TODO: fix path from direcotry
-chanLocs = load("Documentation\Data\chanlocs.mat");
+chanLocs = load(strcat(path,"chanlocs.mat"));
 
-%Ierating through the activity data (skipping the first element)
+%Iterating through the activity data (skipping the first element)
 for i = 6:-1:1 %Odd spacing w/ given data
-    filePath = strcat("Documentation\Data\", myFiles(i * 2 - 1).name);
+    filePath = strcat(path, myFiles(i * 2 - 1).name);
     myWorkData(i) = load(filePath);
 end
 
-%Ierating through the rest data
+%Iterating through the rest data
 for j = 6:-1:1 %Even spacing w/ given data
-    filePath = strcat("Documentation\Data\", myFiles(j * 2).name);
+    filePath = strcat(path, myFiles(j * 2).name);
     myRestData(j) = load(filePath);
 end
 
@@ -59,20 +64,22 @@ for signal = length(myRestData):-1:1 %Same dimension between ds
 
         %Expliciting the signals in the frequency domain using the Welch
         %method as specified in the reference paper
-        [freqWorkSig, f1] = pwelch(timeWorkSig, hamming(Fs*10), Fs*0.1, Fs);
-        [freqRestSig, f2] = pwelch(timeRestSig, hamming(Fs*10), Fs*0.1, Fs);
+        freqWorkSig = pwelch(timeWorkSig, hamming(Fs*10), Fs*0.1, Fs);
+        freqRestSig = pwelch(timeRestSig, hamming(Fs*10), Fs*0.1, Fs);
 
         %Plotting the overlap between the two power spectrum densities
         subplot(5, 4, electrode);
-        plot(f1, freqWorkSig);
+        plot(freqWorkSig);
+        xlim([0 70])
         hold on
-        plot(f2, freqRestSig);
+        plot(freqRestSig);
+        xlim([0 70])
         title(strcat(int2str(signal), ":", electrodes(electrode)));
     end
 end
 
 
-%%SAMPLE STRUCT PARAM IT
+%% SAMPLE STRUCT PARAM IT
 % fn=fieldnames(structure);
 % %loop through the fields
 % for i=1: numel(fn)
