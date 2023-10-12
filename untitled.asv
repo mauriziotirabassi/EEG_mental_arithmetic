@@ -19,9 +19,9 @@ for i = (length(myFiles) - 2):-2:1 %Odd spacing w/ given data
 end
 
 %Ierating through the rest data
-for j = (length(myFiles) - 1):-2:2 %Even spacing w/ given data
-    filePath = strcat("Documentation\Data\", myFiles(j).name);
-    myRestData(j) = load(filePath);
+for i = (length(myFiles) - 1):-2:2 %Even spacing w/ given data
+    filePath = strcat("Documentation\Data\", myFiles(i).name);
+    myRestData(i) = load(filePath);
 end
 
 %Expliciting the struct attributes in order to iterate through them
@@ -49,7 +49,7 @@ axis square
 
 %Plotting the differences(?) between the rest and activity state for each
 %person for each electrode
-for signal = length(myRestData):-1:1 %Same dimension between ds
+for signal = length(myWorkData):-1:1 %Same dimension between ds
     figure;
     for electrode = length(electrodes):-1:1
 
@@ -59,14 +59,14 @@ for signal = length(myRestData):-1:1 %Same dimension between ds
 
         %Expliciting the signals in the frequency domain using the Welch
         %method as specified in the reference paper
-        [freqWorkSig, f1] = pwelch(timeWorkSig, hamming(Fs*10), Fs*0.1, Fs);
-        [freqRestSig, f2] = pwelch(timeRestSig, hamming(Fs*10), Fs*0.1, Fs);
+        [freqWorkSig, f1] = pwelch(timeWorkSig, hamming(Fs*10), 50, Fs);
+        %[freqRestSig, f2] = pwelch(timeRestSig, hamming(Fs), Fs*0.1, Fs);
 
         %Plotting the overlap between the two power spectrum densities
         subplot(5, 4, electrode);
         plot(f1, freqWorkSig);
         hold on
-        plot(f2, freqRestSig);
+        %plot(f2, freqRestSig);
         title(strcat(int2str(signal), ":", electrodes(electrode)));
     end
 end
