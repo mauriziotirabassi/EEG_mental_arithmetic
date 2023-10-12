@@ -13,14 +13,14 @@ myFiles = dir("Documentation\Data\*.mat");
 chanLocs = load("Documentation\Data\chanlocs.mat");
 
 %Ierating through the activity data (skipping the first element)
-for i = (length(myFiles) - 2):-2:1 %Odd spacing w/ given data
-    filePath = strcat("Documentation\Data\", myFiles(i).name);
+for i = 6:-1:1 %Odd spacing w/ given data
+    filePath = strcat("Documentation\Data\", myFiles(i * 2 - 1).name);
     myWorkData(i) = load(filePath);
 end
 
 %Ierating through the rest data
-for j = (length(myFiles) - 1):-2:2 %Even spacing w/ given data
-    filePath = strcat("Documentation\Data\", myFiles(j).name);
+for j = 6:-1:1 %Even spacing w/ given data
+    filePath = strcat("Documentation\Data\", myFiles(j * 2).name);
     myRestData(j) = load(filePath);
 end
 
