@@ -4,9 +4,8 @@ Fs = 500;
 % t = (1:30*Fs)/Fs;
 
 %TODO: when using MACOS explicit the full length path: 
-path="/Users/mattiapezzano/Documents/GitHub/proj-bsp-2023/Documentation/Data/";
-% path="Documentation\Data\";
-
+%path="/Users/mattiapezzano/Documents/GitHub/proj-bsp-2023/Data/";
+path="Data\";
 myFiles = dir(strcat(path, "*.mat"));
 
 %TODO: fix path from directory
@@ -33,7 +32,7 @@ plot3([chanLocs.chanlocs.X], [chanLocs.chanlocs.Y], [chanLocs.chanlocs.Z], 'ko',
 hold on
 for i = 1:length([chanLocs.chanlocs.X])
     %TODO: correct locations
-    text(chanLocs.chanlocs(i).X + 3, chanLocs.chanlocs(i).Y, chanLocs.chanlocs(i).Z, electrodes(i))
+    text(chanLocs.chanlocs(i).X + 3, chanLocs.chanlocs(i).Y, chanLocs.chanlocs(i).Z, chanLocs.chanlocs(i).labels)
 end
 
 xlabel('X'), ylabel('Y'), zlabel('Z')
