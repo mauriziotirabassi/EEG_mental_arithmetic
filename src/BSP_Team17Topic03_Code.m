@@ -1,15 +1,17 @@
 clear variables; close all; clc
 
-Fs = 500;
-% t = (1:30*Fs)/Fs;
+%Setting the path to the resources depending on the current OS
+if isunix
+    path = "/Users/mattiapezzano/Documents/GitHub/proj-bsp-2023/Data/";
+else
+    path = "Data\";
+end
 
-%TODO: when using MACOS explicit the full length path: 
-%path="/Users/mattiapezzano/Documents/GitHub/proj-bsp-2023/Data/";
-path="Data\";
+%Loading the data files into a dir struct
 myFiles = dir(strcat(path, "*.mat"));
 
-%TODO: fix path from directory
-chanLocs = load(strcat(path, "chanlocs.mat"));
+%Loading the file containing the specifics about the EEG
+EEG = load(strcat(path, "chanlocs.mat"));
 
 %Iterating through the activity data (skipping the first element)
 for i = (length(myFiles) - 1)/2:-1:1
@@ -28,13 +30,16 @@ end
 %case it is
 electrodes = ["C3","C4","CZ","F3","F4","F7","F8","FP1","FP2","FZ","O1","O2","P3","P4","PZ","T3","T4","T5","T6"];
 
+Fs = 500;
+% t = (1:30*Fs)/Fs;
+
 %% Plotting the location of the electrodes in 3D
-plot3([chanLocs.chanlocs.X], [chanLocs.chanlocs.Y], [chanLocs.chanlocs.Z], 'ko', 'MarkerFaceColor','k');
+plot3([EEG.chanlocs.X], [EEG.chanlocs.Y], [EEG.chanlocs.Z], 'ko', 'MarkerFaceColor','k');
 
 hold on
-for i = 1:length([chanLocs.chanlocs.X])
+for i = 1:length([EEG.chanlocs.X])
     %TODO: correct locations
-    text(chanLocs.chanlocs(i).X + 3, chanLocs.chanlocs(i).Y, chanLocs.chanlocs(i).Z, chanLocs.chanlocs(i).labels)
+    text(EEG.chanlocs(i).X + 3, EEG.chanlocs(i).Y, EEG.chanlocs(i).Z, EEG.chanlocs(i).labels)
 end
 
 xlabel('X'), ylabel('Y'), zlabel('Z')
@@ -42,7 +47,16 @@ title('Electrode locations')
 axis square
 
 %% Plotting the location of the electrodes in 2D
-%TODO: topoplot
+
+
+% %TODO:  Undefined function 'finputcheck' for input arguments of type 'cell'.
+% topoplot(zeros(length(electrodes), 1), EEG.chanlocs, 'electrodes', 'numbers')
+
+% for electrode = length(electrodes):-1:1
+%     figure
+%     [handle,Zi,grid,Xi,Yi] = topoplot([chanLocs.chanlocs(i).X], [chanLocs.chanlocs(i).Y], chanLocs.chanlocs(i));
+%     plot(grid);
+% end
 
 %% PSD
 
@@ -72,3 +86,17 @@ for signal = (length(myFiles) - 1)/2:-1:1 %Same dimension between ds
     end
 end
 
+%% Detrended Fluctuation Analysis
+
+for signal = length(myRestData):-1:1 %Same dimension between ds
+    figure;
+    for electrode = length(electrodes):-1:1
+
+        %Expliciting the signals in time domain
+        timeWorkSig = myWorkData(signal).(electrodes(electrode));
+        timeRestSig = myRestData(signal).(electrodes(electrode));
+
+        %Summing
+        %TODO: detrending the signal and summing
+    end
+end

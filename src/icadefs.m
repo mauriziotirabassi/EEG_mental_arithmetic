@@ -34,9 +34,9 @@
 % -----------------------------------------------------------
 % ------------- START OF PATH DEFINITION --------------------
 if isunix
- ICADIR = [ '/home/scott/matlab/' ];   % <=INSERT Unix Matlab ICA dirname here
+ ICADIR = '/home/scott/matlab/';   % <=INSERT Unix Matlab ICA dirname here
 else                                   %    Include trailing /
- ICADIR = [ 'f:\scott\matlab\' ];      % <=INSERT PC matlab ICA dirname here
+ ICADIR = 'C:\Program Files\MATLAB';      % <=INSERT PC matlab ICA dirname here
 end                                    %    Include trailing /
                                        % Change this if you install the
 TUTDIR = '/home/scott/matlab/tutorial';% toolbox tutorial elsewere. If
