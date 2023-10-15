@@ -2,7 +2,7 @@ clear variables; close all; clc
 
 %Setting the path to the resources depending on the current OS
 if isunix
-    path = '/Users/mattiapezzano/Documents/GitHub/proj-bsp-2023/Data/';
+    path = '/Users/mattiapezzano/Documents/GitHub/proj-bsp-2023/src/Data/';
 else
     path = 'Data\';
 end
