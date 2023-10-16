@@ -27,6 +27,7 @@ for tmp = (length(myFiles) - 1)/2:-1:1
     myRestData(tmp) = load(filePath);
 end
 
+
 %Expliciting the struct attributes in order to iterate through them
 electrodes = strings(1,19);
 for i = 1:19 %TODO: length chanlocs - 2 redundant
