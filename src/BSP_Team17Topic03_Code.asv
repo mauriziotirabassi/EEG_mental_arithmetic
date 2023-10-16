@@ -85,8 +85,8 @@ for signal = (length(myFiles) - 1)/2:-1:1 %Same dimension between ds
         timeRestSig = timeRestSig(1:length(timeRestSig) - sigErr);
 
         %TODO: trim window to adjust for stationarity
-        timeWorkSig = timeWorkSig(length(timeWorkSig)/2 - Fs*(dimW/2) : length(timeWorkSig)/2 + Fs*(dimW/2));
-        timeRestSig = timeRestSig(length(timeRestSig)/2 - Fs*(dimW/2) : length(timeRestSig)/2 + Fs*(dimW/2));
+        timeWorkSig = timeWorkSig(length(timeWorkSig)/2 - Fs*dimW : length(timeWorkSig)/2 + Fs*dimW);
+        timeRestSig = timeRestSig(length(timeRestSig)/2 - Fs*dimW : length(timeRestSig)/2 + Fs*dimW);
 
         %Computing the PSD using the Welch method (specifics in references)
         freqWorkSig(electrode, :) = pwelch(timeWorkSig, hamming(Fs*10), Fs*0.1, Fs);
@@ -122,8 +122,7 @@ for signal = (length(myFiles) - 1)/2:-1:1 %Same dimension between ds
     title(strcat('Subject ', int2str(signal), ' rest'))
 
     %TODO: choose colorbar range relatively to the normalization of the
-    %fourier transform(?): run a simulation to know the actual value
-    %beforehand
+    %fourier transform(?)
   
 end
 
