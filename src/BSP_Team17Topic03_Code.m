@@ -1,6 +1,6 @@
 clear variables; close all; clc
 
-%Setting the path to the resources depending on the current OS
+%Setting the path to the resources relatively to the running OS
 if isunix
     path = '/Users/mattiapezzano/Documents/GitHub/proj-bsp-2023/src/Data/';
 else
@@ -15,33 +15,31 @@ myFiles = dir(strcat(path, '*.mat'));
 tmp = load(strcat(path, 'chanlocs.mat'));
 chanlocs = tmp.chanlocs;
 
+subjNum = (length(myFiles) - 1)/2; % Number of subjects ("- 1" to exclude chanlocs.mat)
+
 %Iterating through the activity data (skipping the first element)
-for tmp = (length(myFiles) - 1)/2:-1:1
+for tmp = subjNum:-1:1 
     filePath = strcat(path, myFiles(tmp * 2 - 1).name); %Odd spacing w/ given data
     myWorkData(tmp) = load(filePath);
 end
 
 %Iterating through the rest data
-for tmp = (length(myFiles) - 1)/2:-1:1
+for tmp = subjNum:-1:1
     filePath = strcat(path, myFiles(tmp * 2).name); %Even spacing w/ given data
     myRestData(tmp) = load(filePath);
 end
 
+chanNum = 19; %Number of electrodes
+Fs = 500; %Sampling frequency
+hz = linspace(0, Fs/2, floor(Fs/2) + 1); %Frequency scale
+sigErr = 1000; %Number of samples to ignore
+dimW = 45; %Window length in seconds to approximate for stationarity
 
-%Expliciting the struct attributes in order to iterate through them
-electrodes = strings(1,19);
-for i = 1:19 %TODO: length chanlocs - 2 redundant
+%Defining the vector of the electrode channels
+electrodes = strings(1, chanNum);
+for i = 1:chanNum %TODO: length chanlocs - 2 redundant
     electrodes(i) = upper(chanlocs(i).labels);
 end
-
-Fs = 500;
-% t = (1:30*Fs)/Fs;
-
-%Defining the frequency scale
-hz = linspace(0, Fs/2, floor(Fs/2) + 1);
-
-%Expliciting the number of samples to ignore
-sigErr = 1000;
 
 %% Plotting the location of the electrodes in 3D
 plot3([chanlocs.X], [chanlocs.Y], [chanlocs.Z], 'ko', 'MarkerFaceColor','k');
@@ -53,25 +51,15 @@ for tmp = 1:length(electrodes)
 end
 
 xlabel('X'), ylabel('Y'), zlabel('Z')
-title('Electrode locations')
+title('Electrode Positions')
 axis square
-
-%% Plotting the location of the electrodes in 2D
-
-%TODO: ask if it's ok to use ext sources
-%topoplotIndie(, chanlocs, 'electrodes', 'numbers');
-
-title('2D topographical map');
 
 %% PSD
 
-%Choosing the dimension of the window to approx for stationarity
-dimW = 45;
-
-%Plotting the differences in PSD between working and resting conditions for
-%each subject
+%Plotting the differences between the power spectral densities in work and
+%rest conditions for each subject
 figure
-for signal = (length(myFiles) - 1)/2:-1:1 %Same dimension between ds
+for signal = subjNum:-1:1
     
     %Computing the PSD with the Welch method for every electrode in both
     %working and resting conditions
@@ -85,7 +73,8 @@ for signal = (length(myFiles) - 1)/2:-1:1 %Same dimension between ds
         timeWorkSig = timeWorkSig(1:length(timeWorkSig) - sigErr);
         timeRestSig = timeRestSig(1:length(timeRestSig) - sigErr);
 
-        %TODO: trim window to adjust for stationarity
+        %Selecting a limited window to approximate for stationarity
+        % (dimW seconds centered in the signal median)
         timeWorkSig = timeWorkSig(length(timeWorkSig)/2 - Fs*(dimW/2) : length(timeWorkSig)/2 + Fs*(dimW/2));
         timeRestSig = timeRestSig(length(timeRestSig)/2 - Fs*(dimW/2) : length(timeRestSig)/2 + Fs*(dimW/2));
 
@@ -96,6 +85,7 @@ for signal = (length(myFiles) - 1)/2:-1:1 %Same dimension between ds
     end
 
     %Sorting the electrodes relatively to their X coordinate
+    % (from the occipital lobe to the frontal lobe)
     [~, sortXidx] = sort([chanlocs.X]);
 
     %Defining a boolean for plotting purposes
@@ -111,16 +101,16 @@ for signal = (length(myFiles) - 1)/2:-1:1 %Same dimension between ds
     imagesc(hz, [], freqWorkSig(sortXidx, 1:length(hz)));
     set(gca, 'xlim', [0 70], 'clim', [0 100]); %Focusing on the 0-70Hz range
     colorbar
-    xlabel('Frequency (Hz)'), ylabel('Electrode')
-    title(strcat('Subject ', int2str(signal), ' work'))
+    xlabel('Frequency (Hz)'), ylabel('F <-- --> O')
+    title(strcat('Subj', int2str(signal), ' Work'))
 
     %Plotting the PSDs for resting conditions
     subplot(4, 3, tmp + 3)
     imagesc(hz,[], freqRestSig(sortXidx, 1:length(hz)));
     set(gca, 'xlim', [0 70], 'clim', [0 100]); %Focusing on the 0-70Hz range
     colorbar
-    xlabel('Frequency (Hz)'), ylabel('Electrode')
-    title(strcat('Subject ', int2str(signal), ' rest'))
+    xlabel('Frequency (Hz)'), ylabel('F <-- --> O')
+    title(strcat('Subj', int2str(signal), ' Rest'))
 
     %TODO: choose colorbar range relatively to the normalization of the
     %fourier transform(?): run a simulation to know the actual value
@@ -128,22 +118,11 @@ for signal = (length(myFiles) - 1)/2:-1:1 %Same dimension between ds
   
 end
 
-%% Plotting the topographs
-figure
-topoplotIndie(freqWorkSig(:, 20), chanlocs, 'electrodes', 'numbers');
-colormap parula
+%% Plotting the topographic maps
 
-% %% Detrended Fluctuation Analysis
-% 
-% for signal = length(myRestData):-1:1 %Same dimension between ds
-%     figure;
-%     for electrode = length(electrodes):-1:1
-% 
-%         %Expliciting the signals in time domain
-%         timeWorkSig = myWorkData(signal).(electrodes(electrode));
-%         timeRestSig = myRestData(signal).(electrodes(electrode));
-% 
-%         %Summing
-%         %TODO: detrending the signal and summing
-%     end
-% end
+%TODO: average of the PSD for the 4 given ranges. Four topoplots for each
+%patient both in rest and working conditions
+
+figure
+topoplot(freqWorkSig(:, 20), chanlocs, 'electrodes', 'numbers');
+colormap parula
