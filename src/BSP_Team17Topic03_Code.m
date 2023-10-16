@@ -27,6 +27,7 @@ for tmp = (length(myFiles) - 1)/2:-1:1
     myRestData(tmp) = load(filePath);
 end
 
+
 %Expliciting the struct attributes in order to iterate through them
 %TODO: see if chanlocs order is the same as the signal one, use chanlocs in
 %case it is
