@@ -42,6 +42,7 @@ for i = 1:chanNum %TODO: length chanlocs - 2 redundant
 end
 
 %% Plotting the location of the electrodes in 3D
+figure
 plot3([chanlocs.X], [chanlocs.Y], [chanlocs.Z], 'ko', 'MarkerFaceColor','k');
 
 %Labelling the electrodes
@@ -79,8 +80,8 @@ for signal = subjNum:-1:1
         timeRestSig = timeRestSig(length(timeRestSig)/2 - Fs*(dimW/2) : length(timeRestSig)/2 + Fs*(dimW/2));
 
         %Computing the PSD using the Welch method (specifics in references)
-        freqWorkSig(electrode, :) = pwelch(timeWorkSig, hamming(Fs*10), Fs*0.1, Fs);
-        freqRestSig(electrode, :) = pwelch(timeRestSig, hamming(Fs*10), Fs*0.1, Fs);
+        freqWorkSig(electrode, :, signal) = 20*log(pwelch(timeWorkSig, hamming(Fs*10), Fs*0.1, Fs));
+        freqRestSig(electrode, :, signal) = 20*log(pwelch(timeRestSig, hamming(Fs*10), Fs*0.1, Fs));
 
     end
 
@@ -98,16 +99,16 @@ for signal = subjNum:-1:1
 
     %Plotting the PSDs for working conditions
     subplot(4, 3, tmp)
-    imagesc(hz, [], freqWorkSig(sortXidx, 1:length(hz)));
-    set(gca, 'xlim', [0 70], 'clim', [0 100]); %Focusing on the 0-70Hz range
+    imagesc(hz, [], freqWorkSig(sortXidx, 1:length(hz), signal));
+    set(gca, 'xlim', [0 70], 'clim', [-200 200]); %Focusing on the 0-70Hz range
     colorbar
     xlabel('Frequency (Hz)'), ylabel('F <-- --> O')
     title(strcat('Subj', int2str(signal), ' Work'))
 
     %Plotting the PSDs for resting conditions
     subplot(4, 3, tmp + 3)
-    imagesc(hz,[], freqRestSig(sortXidx, 1:length(hz)));
-    set(gca, 'xlim', [0 70], 'clim', [0 100]); %Focusing on the 0-70Hz range
+    imagesc(hz,[], freqRestSig(sortXidx, 1:length(hz), signal));
+    set(gca, 'xlim', [0 70], 'clim', [-200 200]); %Focusing on the 0-70Hz range
     colorbar
     xlabel('Frequency (Hz)'), ylabel('F <-- --> O')
     title(strcat('Subj', int2str(signal), ' Rest'))
@@ -118,11 +119,68 @@ for signal = subjNum:-1:1
   
 end
 
+figure
+plot(hz, freqRestSig(2, :, 2))
+
 %% Plotting the topographic maps
 
 %TODO: average of the PSD for the 4 given ranges. Four topoplots for each
 %patient both in rest and working conditions
 
-figure
-topoplot(freqWorkSig(:, 20), chanlocs, 'electrodes', 'numbers');
-colormap parula
+%Dividing the PSDs relatively to the lobe they belong to
+for signal = subjNum:-1:1
+    frontal = 7;
+    temporalDx = 2;
+    temporalSx = 2;
+    parietal = 6;
+    occipital = 2;
+
+    for electrode = 1:length(electrodes)
+        eTag = electrodes(electrode);
+
+        if(startsWith(eTag, 'F'))
+            frontalWork(frontal, :, signal) = freqWorkSig(electrode, :, signal);
+            frontalRest(frontal, :, signal) = freqRestSig(electrode, :, signal);
+            frontal = frontal - 1;
+        elseif(startsWith(eTag, 'C') || startsWith(eTag, 'P'))
+            parietalWork(parietal, :, signal) = freqWorkSig(electrode, :, signal);
+            parietalRest(parietal, :, signal) = freqRestSig(electrode, :, signal);
+            parietal = parietal - 1;
+        elseif(startsWith(eTag, 'O'))
+            occipitalWork(occipital, :, signal) = freqWorkSig(electrode, :, signal);
+            occipitalRest(occipital, :, signal) = freqRestSig(electrode, :, signal);
+            occipital = occipital - 1;
+        elseif(eTag == "T4" || eTag == "T6")
+            temporalDxWork(temporalDx, :, signal) = freqWorkSig(electrode, :, signal);
+            temporalDxRest(temporalDx, :, signal) = freqRestSig(electrode, :, signal);
+            temporalDx = temporalDx - 1;
+        elseif(eTag == "T3" || eTag == "T5")
+            temporalSxWork(temporalSx, :, signal) = freqWorkSig(electrode, :, signal);
+            temporalSxRest(temporalSx, :, signal) = freqRestSig(electrode, :, signal);
+            temporalSx = temporalSx - 1;
+        end
+    end
+
+    %Computing the lobe mean
+    fWMean(signal, :) = mean(frontalWork(:, :, signal));
+    fRMean(signal, :) = mean(frontalRest(:, :, signal));
+
+    pWMean(signal, :) = mean(parietalWork(:, :, signal));
+    pRMean(signal, :) = mean(parietalRest(:, :, signal));
+
+    oWMean(signal, :) = mean(occipitalWork(:, :, signal));
+    oRMean(signal, :) = mean(occipitalRest(:, :, signal));
+
+    tDWMean(signal, :) = mean(temporalDxWork(:, :, signal));
+    tDRMean(signal, :) = mean(temporalDxRest(:, :, signal));
+
+    tSWMean(signal, :) = mean(temporalSxWork(:, :, signal));
+    tSRMean(signal, :) = mean(temporalSxRest(:, :, signal));
+
+    %Plotting
+    figure
+    plot(hz, fWMean(signal, :))
+    hold on
+    plot(hz, fRMean(signal, :))
+
+end
