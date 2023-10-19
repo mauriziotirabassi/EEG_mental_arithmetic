@@ -184,3 +184,9 @@ for signal = subjNum:-1:1
     plot(hz, fRMean(signal, :))
 
 end
+
+%% mean over freq band of interest
+
+%interesting bands: delta(1,5-3,9Hz), theta(4-7Hz),
+%alpha(8-13Hz), beta1(13-20Hz), beta2(20-30Hz), gamma(30-40Hz)
+
