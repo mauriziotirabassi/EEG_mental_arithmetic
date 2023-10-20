@@ -207,19 +207,17 @@ end
 
 for i = 1:subjNum
     for j = 1:length(electrodes)
-    deltaRest(j,i) = mean(freqRestSig(j,find(hz==1):find(hz==4),i));
-    thetaRest(j,i) = mean(freqRestSig(j,find(hz==4):find(hz==7),i));
-    alphaRest(j,i) = mean(freqRestSig(j,find(hz==8):find(hz==13),i));
-    beta1Rest(j,i) = mean(freqRestSig(j,find(hz==13):find(hz==20),i));
-    beta2Rest(j,i) = mean(freqRestSig(j,find(hz==20):find(hz==30),i));
-    gammaRest(j,i) = mean(freqRestSig(j,find(hz==30):find(hz==40),i));
-    deltaWork(j,i) = mean(freqWorkSig(j,find(hz==1):find(hz==4),i));
-    thetaWork(j,i) = mean(freqWorkSig(j,find(hz==4):find(hz==7),i));
-    alphaWork(j,i) = mean(freqWorkSig(j,find(hz==8):find(hz==13),i));
-    beta1Work(j,i) = mean(freqWorkSig(j,find(hz==13):find(hz==20),i));
-    beta2Work(j,i) = mean(freqWorkSig(j,find(hz==20):find(hz==30),i));
-    gammaWork(j,i) = mean(freqWorkSig(j,find(hz==30):find(hz==40),i));
+    deltaRest(j,i) = mean(freqRestSig(j,,i));
+    thetaRest(j,i) = mean(freqRestSig(j,hz(4):hz(7),i));
+    alphaRest(j,i) = mean(freqRestSig(j,hz(8):hz(13),i));
+    beta1Rest(j,i) = mean(freqRestSig(j,hz(13):hz(20),i));
+    beta2Rest(j,i) = mean(freqRestSig(j,hz(20):hz(30),i));
+    gammaRest(j,i) = mean(freqRestSig(j,hz(30):hz(40),i));
+    deltaWork(j,i) = mean(freqWorkSig(j,hz(1):hz(4),i));
+    thetaWork(j,i) = mean(freqWorkSig(j,hz(4):hz(7),i));
+    alphaWork(j,i) = mean(freqWorkSig(j,hz(8):hz(13),i));
+    beta1Work(j,i) = mean(freqWorkSig(j,hz(13):hz(20),i));
+    beta2Work(j,i) = mean(freqWorkSig(j,hz(20):hz(30),i));
+    gammaWork(j,i) = mean(freqWorkSig(j,hz(30):hz(40),i));
     end
 end
-%could save the ranges in a matrix and navigate it: improves operation ease
-%but loses readability
