@@ -81,7 +81,7 @@ for signal = subjNum:-1:1
 
         %Computing the PSD using the Welch method (specifics in references)
         [freqWorkSig(electrode, :, signal),hz] = pwelch(timeWorkSig, hamming(Fs*10), Fs*0.1, Fs*10);
-        [freqRestSig(electrode, :, signal),hz] = pwelch(timeRestSig, hamming(Fs*10), Fs*0.1, Fs*10);
+        [freqRestSig(electrode, :, signal),~] = pwelch(timeRestSig, hamming(Fs*10), Fs*0.1, Fs*10);
         hz=hz*Fs/2/pi;
         freqWorkSig(electrode, :, signal) = 20*log10(pwelch(timeWorkSig, hamming(Fs*10), Fs*0.1, Fs*10));
         freqRestSig(electrode, :, signal) = 20*log10(pwelch(timeRestSig, hamming(Fs*10), Fs*0.1, Fs*10));
