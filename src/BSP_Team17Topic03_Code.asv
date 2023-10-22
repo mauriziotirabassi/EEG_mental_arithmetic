@@ -231,8 +231,8 @@ end
 for k=subjNum:-1:1
     for i= 1:length(electrodes)
         for j= 1:length(electrodes)
-            RestMSC(i,j,:,k)=mscohere(RestRecord(i,:,k),RestRecord(j,:,k),hamming(Fs*10), Fs*0.1, Fs*10);
-            WorkMSC(i,j,:,k)=mscohere(WorkRecord(i,:,k),WorkRecord(j,:,k),hamming(Fs*10), Fs*0.1, Fs*10);
+            RestMSC(i,j,k)=mschoere(RestRecord(i,:,k),RestRecord(j,:,k),hamming(Fs*10), Fs*0.1, Fs*10);
+            WorkMSC(i,j,k)=mscohere();
         end
     end
 end
