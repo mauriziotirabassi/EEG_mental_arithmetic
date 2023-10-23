@@ -35,11 +35,16 @@ Fs = 500; %Sampling frequency
 sigErr = 1000; %Number of samples to ignore
 dimW = 45; %Window length in seconds to approximate for stationarity
 
+freqBands = [1, 4, 8, 13, 20, 30, 40]; %Relevant frequency bands
+
 %Defining the vector of the electrode channels
 electrodes = strings(1, chanNum);
 for i = 1:chanNum %TODO: length chanlocs - 2 redundant
     electrodes(i) = upper(chanlocs(i).labels);
 end
+
+workBands = zeros(length(electrodes), length(freqBands), subjNum);
+restBands = zeros(length(electrodes), length(freqBands), subjNum);
 
 %% Plotting the location of the electrodes in 3D
 figure
@@ -60,15 +65,15 @@ axis square
 %Plotting the differences between the power spectral densities in work and
 %rest conditions for each subject
 figure
-for signal = subjNum:-1:1
+for subj = subjNum:-1:1
     
     %Computing the PSD with the Welch method for every electrode in both
     %working and resting conditions
     for electrode = 1:length(electrodes)
 
         %Expliciting the signals in time domain
-        timeWorkSig = myWorkData(signal).(electrodes(electrode));
-        timeRestSig = myRestData(signal).(electrodes(electrode));
+        timeWorkSig = myWorkData(subj).(electrodes(electrode));
+        timeRestSig = myRestData(subj).(electrodes(electrode));
 
         %Trimming the time series to get rid of signal error
         timeWorkSig = timeWorkSig(1:length(timeWorkSig) - sigErr);
@@ -78,60 +83,69 @@ for signal = subjNum:-1:1
         % (dimW seconds centered in the signal median)
         timeWorkSig = timeWorkSig(length(timeWorkSig)/2 - Fs*(dimW/2) : length(timeWorkSig)/2 + Fs*(dimW/2));
         timeRestSig = timeRestSig(length(timeRestSig)/2 - Fs*(dimW/2) : length(timeRestSig)/2 + Fs*(dimW/2));
-        WorkRecord(electrode,:,signal)=timeWorkSig;
-        RestRecord(electrode,:,signal)=timeRestSig;
+
         %Computing the PSD using the Welch method (specifics in references)
-        [freqWorkSig(electrode, :, signal),hz] = pwelch(timeWorkSig, hamming(Fs*10), Fs*0.1, Fs*10);
-        [freqRestSig(electrode, :, signal),~] = pwelch(timeRestSig, hamming(Fs*10), Fs*0.1, Fs*10);
-        hz=hz*Fs/2/pi;
-        freqWorkSig(electrode, :, signal) = 20*log10(pwelch(timeWorkSig, hamming(Fs*10), Fs*0.1, Fs*10));
-        freqRestSig(electrode, :, signal) = 20*log10(pwelch(timeRestSig, hamming(Fs*10), Fs*0.1, Fs*10));
+        [freqWorkSig, hz] = pwelch(timeWorkSig, hamming(Fs*10), Fs*0.1, Fs*10);
+        [freqRestSig, ~] = pwelch(timeRestSig, hamming(Fs*10), Fs*0.1, Fs*10);
+        
+        %Normalizing the psds to highlight the differences between work
+        %and rest conditions
+        ratioSig(electrode, :, subj) = 10*log10(freqWorkSig./freqRestSig);
+        diffSig(electrode, :, subj) = 10*log10(freqWorkSig - freqRestSig);
+
+        %Averaging over bands of interest:
+        % delta(1-4)Hz, theta(4-8)Hz, alpha(8-13)Hz, 
+        % beta1(13-20)Hz, beta2(20-30)Hz, gamma(30-40)Hz
+        % for freq = 1:(length(freqBands) - 1)
+        %     startBand = freqBands(freq);
+        %     endBand = freqBands(freq + 1);
+        %     workBands(electrode, freq, subj) = mean(freqWorkSig(electrode, find(hz == startBand):find(hz == endBand), subj));
+        %     restBands(electrode, freq, subj) = mean(freqRestSig(electrode, find(hz == startBand):find(hz == endBand), subj));
+        % end
+
+        %Definig the double ds
+        workRecord(electrode, :, subj) = timeWorkSig;
+        restRecord(electrode, :, subj) = timeRestSig;
 
     end
+
+    %Denormalizing the frequency range (implicitly normalized by the pwelch
+    %function)
+    hz = hz*Fs/2/pi;
+
     %Sorting the electrodes relatively to their X coordinate
     % (from the occipital lobe to the frontal lobe)
     [~, sortXidx] = sort([chanlocs.X]);
 
-    %Defining a boolean for plotting purposes
-    if signal < 4
-        idx = 0;
-    else 
-        idx = 1;
-    end
-    tmp = signal + idx * 3;
-
-    %Plotting the PSDs for working conditions
-    subplot(4, 3, tmp)
-    imagesc(hz, [], freqWorkSig(sortXidx, 1:length(hz), signal));
-    set(gca, 'xlim', [0 70], 'clim', [-100 100]); %Focusing on the 0-70Hz range
+    %Plotting the ratio normalized psd
+    subplot(3, 2, subj)
+    imagesc(hz, [], ratioSig(sortXidx, 1:length(hz), subj));
+    set(gca, 'xlim', [0 70], 'clim', [-30 30]); %Focusing on the 0-70Hz range
     colorbar
     xlabel('Frequency (Hz)'), ylabel('F <-- --> O')
-    title(strcat('Subj', int2str(signal), ' Work'))
-
-    %Plotting the PSDs for resting conditions
-    subplot(4, 3, tmp + 3)
-    imagesc(hz,[], freqRestSig(sortXidx, 1:length(hz), signal));
-    set(gca, 'xlim', [0 70], 'clim', [-100 100]); %Focusing on the 0-70Hz range
-    colorbar
-    xlabel('Frequency (Hz)'), ylabel('F <-- --> O')
-    title(strcat('Subj', int2str(signal), ' Rest'))
-
+    title(strcat('Subj', int2str(subj), ' Work'))
+    
     %TODO: choose colorbar range relatively to the normalization of the
     %fourier transform(?): run a simulation to know the actual value
     %beforehand
   
 end
 
- figure
- plot(hz, freqRestSig(2, :, 2))
+%% Plotting the average topographical maps
 
-%% Plotting the topographic maps
+%Averaging over subjects
+% for subj = 1:subjNum
+%     avgWork = 
+%     avgRest = 
+% end
+
+%% Averaging operations
 
 %TODO: average of the PSD for the 4 given ranges. Four topoplots for each
 %patient both in rest and working conditions
 
 %Dividing the PSDs relatively to the lobe they belong to
-for signal = subjNum:-1:1
+for subj = subjNum:-1:1
     frontal = 7;
     temporalDx = 2;
     temporalSx = 2;
@@ -142,88 +156,59 @@ for signal = subjNum:-1:1
         eTag = electrodes(electrode);
 
         if(startsWith(eTag, 'F'))
-            frontalWork(frontal, :, signal) = freqWorkSig(electrode, :, signal);
-            frontalRest(frontal, :, signal) = freqRestSig(electrode, :, signal);
+            frontalWork(frontal, :, subj) = freqWorkSig(electrode, :, subj);
+            frontalRest(frontal, :, subj) = freqRestSig(electrode, :, subj);
             frontal = frontal - 1;
         elseif(startsWith(eTag, 'C') || startsWith(eTag, 'P'))
-            parietalWork(parietal, :, signal) = freqWorkSig(electrode, :, signal);
-            parietalRest(parietal, :, signal) = freqRestSig(electrode, :, signal);
+            parietalWork(parietal, :, subj) = freqWorkSig(electrode, :, subj);
+            parietalRest(parietal, :, subj) = freqRestSig(electrode, :, subj);
             parietal = parietal - 1;
         elseif(startsWith(eTag, 'O'))
-            occipitalWork(occipital, :, signal) = freqWorkSig(electrode, :, signal);
-            occipitalRest(occipital, :, signal) = freqRestSig(electrode, :, signal);
+            occipitalWork(occipital, :, subj) = freqWorkSig(electrode, :, subj);
+            occipitalRest(occipital, :, subj) = freqRestSig(electrode, :, subj);
             occipital = occipital - 1;
         elseif(eTag == "T4" || eTag == "T6")
-            temporalDxWork(temporalDx, :, signal) = freqWorkSig(electrode, :, signal);
-            temporalDxRest(temporalDx, :, signal) = freqRestSig(electrode, :, signal);
+            temporalDxWork(temporalDx, :, subj) = freqWorkSig(electrode, :, subj);
+            temporalDxRest(temporalDx, :, subj) = freqRestSig(electrode, :, subj);
             temporalDx = temporalDx - 1;
         elseif(eTag == "T3" || eTag == "T5")
-            temporalSxWork(temporalSx, :, signal) = freqWorkSig(electrode, :, signal);
-            temporalSxRest(temporalSx, :, signal) = freqRestSig(electrode, :, signal);
+            temporalSxWork(temporalSx, :, subj) = freqWorkSig(electrode, :, subj);
+            temporalSxRest(temporalSx, :, subj) = freqRestSig(electrode, :, subj);
             temporalSx = temporalSx - 1;
         end
     end
 
     %Computing the lobe mean
-    fWMean(signal, :) = mean(frontalWork(:, :, signal));
-    fRMean(signal, :) = mean(frontalRest(:, :, signal));
+    fWMean(subj, :) = mean(frontalWork(:, :, subj));
+    fRMean(subj, :) = mean(frontalRest(:, :, subj));
 
-    pWMean(signal, :) = mean(parietalWork(:, :, signal));
-    pRMean(signal, :) = mean(parietalRest(:, :, signal));
+    pWMean(subj, :) = mean(parietalWork(:, :, subj));
+    pRMean(subj, :) = mean(parietalRest(:, :, subj));
 
-    oWMean(signal, :) = mean(occipitalWork(:, :, signal));
-    oRMean(signal, :) = mean(occipitalRest(:, :, signal));
+    oWMean(subj, :) = mean(occipitalWork(:, :, subj));
+    oRMean(subj, :) = mean(occipitalRest(:, :, subj));
 
-    tDWMean(signal, :) = mean(temporalDxWork(:, :, signal));
-    tDRMean(signal, :) = mean(temporalDxRest(:, :, signal));
+    tDWMean(subj, :) = mean(temporalDxWork(:, :, subj));
+    tDRMean(subj, :) = mean(temporalDxRest(:, :, subj));
 
-    tSWMean(signal, :) = mean(temporalSxWork(:, :, signal));
-    tSRMean(signal, :) = mean(temporalSxRest(:, :, signal));
+    tSWMean(subj, :) = mean(temporalSxWork(:, :, subj));
+    tSRMean(subj, :) = mean(temporalSxRest(:, :, subj));
 
     %Plotting
     figure
-    plot(hz, fWMean(signal, :))
+    plot(hz, fWMean(subj, :))
     hold on
-    plot(hz, fRMean(signal, :))
+    plot(hz, fRMean(subj, :))
 
 end
 
-%% mean over freq band of interest
+%% 
+%Dividere freqWorkSig per freqRestSig (normalizzazione rispetto a baseline)
 
-%interesting bands: delta(1,5-3,9Hz), theta(4-7Hz),
-%alpha(8-13Hz), beta1(13-20Hz), beta2(20-30Hz), gamma(30-40Hz)
+%Differenze tra rest e sig tra media di tutti subject (implicita se
+%normalizzato)
 
-    deltaRest=zeros(length(electrodes),subjNum);
-    thetaRest=zeros(length(electrodes),subjNum);
-    alphaRest=zeros(length(electrodes),subjNum);
-    beta1Rest=zeros(length(electrodes),subjNum);
-    beta2Rest=zeros(length(electrodes),subjNum);
-    gammaRest=zeros(length(electrodes),subjNum);
-    deltaWork=zeros(length(electrodes),subjNum);
-    thetaWork=zeros(length(electrodes),subjNum);
-    alphaWork=zeros(length(electrodes),subjNum);
-    beta1Work=zeros(length(electrodes),subjNum);
-    beta2Work=zeros(length(electrodes),subjNum);
-    gammaWork=zeros(length(electrodes),subjNum);
-
-for i = subjNum:-1:1
-    for j = 1:length(electrodes)
-    deltaRest(j,i) = mean(freqRestSig(j,find(hz==1):find(hz==4),i));
-    thetaRest(j,i) = mean(freqRestSig(j,find(hz==4):find(hz==7),i));
-    alphaRest(j,i) = mean(freqRestSig(j,find(hz==8):find(hz==13),i));
-    beta1Rest(j,i) = mean(freqRestSig(j,find(hz==13):find(hz==20),i));
-    beta2Rest(j,i) = mean(freqRestSig(j,find(hz==20):find(hz==30),i));
-    gammaRest(j,i) = mean(freqRestSig(j,find(hz==30):find(hz==40),i));
-    deltaWork(j,i) = mean(freqWorkSig(j,find(hz==1):find(hz==4),i));
-    thetaWork(j,i) = mean(freqWorkSig(j,find(hz==4):find(hz==7),i));
-    alphaWork(j,i) = mean(freqWorkSig(j,find(hz==8):find(hz==13),i));
-    beta1Work(j,i) = mean(freqWorkSig(j,find(hz==13):find(hz==20),i));
-    beta2Work(j,i) = mean(freqWorkSig(j,find(hz==20):find(hz==30),i));
-    gammaWork(j,i) = mean(freqWorkSig(j,find(hz==30):find(hz==40),i));
-    end
-end
-%could save the ranges in a matrix and navigate it: improves operation ease
-%but loses readability
+%
 
 %% topoplots
 
@@ -231,8 +216,10 @@ end
 for k=subjNum:-1:1
     for i= 1:length(electrodes)
         for j= 1:length(electrodes)
-            RestMSC(i,j,k)=mschoere(RestRecord(i,:,k),RestRecord(j,:,k),hamming(Fs*10), Fs*0.1, Fs*10);
-            WorkMSC(i,j,k)=mscohere();
+            RestMSC(i,j,:,k)=mscohere(RestRecord(i,:,k),RestRecord(j,:,k),hamming(Fs*10), Fs*0.1, Fs*10);
+            WorkMSC(i,j,:,k)=mscohere(WorkRecord(i,:,k),WorkRecord(j,:,k),hamming(Fs*10), Fs*0.1, Fs*10);
         end
     end
 end
+
+%Filtro e poi psd o dividi a occhio la finestra?
