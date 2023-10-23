@@ -91,17 +91,18 @@ for subj = subjNum:-1:1
         %Normalizing the psds to highlight the differences between work
         %and rest conditions
         ratioSig(electrode, :, subj) = 10*log10(freqWorkSig./freqRestSig);
-        diffSig(electrode, :, subj) = 10*log10(freqWorkSig - freqRestSig);
 
         %Averaging over bands of interest:
         % delta(1-4)Hz, theta(4-8)Hz, alpha(8-13)Hz, 
         % beta1(13-20)Hz, beta2(20-30)Hz, gamma(30-40)Hz
-        % for freq = 1:(length(freqBands) - 1)
-        %     startBand = freqBands(freq);
-        %     endBand = freqBands(freq + 1);
-        %     workBands(electrode, freq, subj) = mean(freqWorkSig(electrode, find(hz == startBand):find(hz == endBand), subj));
-        %     restBands(electrode, freq, subj) = mean(freqRestSig(electrode, find(hz == startBand):find(hz == endBand), subj));
-        % end
+        for freq = 1:(length(freqBands) - 1)
+            startBand = freqBands(freq);
+            endBand = freqBands(freq + 1);
+            interval = hz(startBand*10 + 1) : 0.1 : hz(endBand*10 + 1);
+            intervalX = linspace(startBand, endBand, (endBand - startBand)*10 + 1);
+            intervalY = ratioSig(electrode, startBand*10 + 1: endBand*10 + 1, subj);
+            bandSig(electrode, freq, subj) = trapz(intervalX, intervalY);
+        end
 
         %Definig the double ds
         workRecord(electrode, :, subj) = timeWorkSig;
@@ -119,7 +120,7 @@ for subj = subjNum:-1:1
 
     %Plotting the ratio normalized psd
     subplot(3, 2, subj)
-    imagesc(hz, [], diffSig(sortXidx, 1:length(hz), subj));
+    imagesc(hz, [], ratioSig(sortXidx, 1:length(hz), subj));
     set(gca, 'xlim', [0 70], 'clim', [-30 30]); %Focusing on the 0-70Hz range
     colorbar
     xlabel('Frequency (Hz)'), ylabel('F <-- --> O')
@@ -128,16 +129,17 @@ for subj = subjNum:-1:1
     %TODO: choose colorbar range relatively to the normalization of the
     %fourier transform(?): run a simulation to know the actual value
     %beforehand
-  
 end
 
 %% Plotting the average topographical maps
-
-%Averaging over subjects
-% for subj = 1:subjNum
-%     avgWork = 
-%     avgRest = 
-% end
+figure
+avgBandSig = mean(bandSig, 3);
+for freq = 1:(length(freqBands) - 1)
+    subplot(2, 3, freq)
+    topoplot(avgBandSig(:, freq), chanlocs)
+    colormap parula
+    title(['(' int2str(freqBands(freq)) '-' int2str(freqBands(freq + 1)) ')Hz'])
+end
 
 %% Averaging operations
 
