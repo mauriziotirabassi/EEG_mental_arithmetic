@@ -75,6 +75,10 @@ for subj = subjNum:-1:1
         timeWork = timeWork(1:length(timeWork) - sigErr);
         timeRest = timeRest(1:length(timeRest) - sigErr);
 
+        %Detrending the time series to remove the constant contribution
+        timeWork = detrend(timeWork);
+        timeRest = detrend(timeRest);
+
         % Selecting a limited window to approximate for stationarity
         % (dimW seconds centered in the signal median)
         timeWork = timeWork(length(timeWork)/2 - Fs*(dimW/2) : length(timeWork)/2 + Fs*(dimW/2));
@@ -168,11 +172,10 @@ end
 
 %Computing the average over subjects
 avgBandSig = mean(psdBand, 3);
-
 figure
 for freq = 1:(length(freqBands) - 1)
     subplot(2, 3, freq)
-    topoplot(avgBandSig(:, freq), chanlocs)
+    topoplot(avgBandSig(:, freq), chanlocs, 'electrodes', 'labels')
     colormap parula
     title(['(' int2str(freqBands(freq)) '-' int2str(freqBands(freq + 1)) ')Hz'])
 end
