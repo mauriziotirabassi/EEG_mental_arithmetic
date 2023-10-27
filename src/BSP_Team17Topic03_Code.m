@@ -24,16 +24,15 @@ for tmp = subjNum:-1:1
     myRestData(tmp) = load(filePath);
 end
 
-chanNum = 19; % Number of electrodes
+chanNum = length(chanlocs) - 2; % Number of electrodes
 Fs = 500; % Sampling frequency
 sigErr = 1000; % Number of samples to ignore
 dimW = 45; % Window length in seconds to approximate for stationarity
-
 freqBands = [1, 4, 8, 13, 20, 30, 40]; % Relevant frequency bands
 
 % Defining the vector of the electrode channels
 electrodes = strings(1, chanNum);
-for i = 1:chanNum %TODO: length chanlocs - 2 redundant
+for i = 1:chanNum
     electrodes(i) = upper(chanlocs(i).labels);
 end
 
@@ -119,7 +118,6 @@ for subj = subjNum:-1:1
     occPsdAvg(subj, :) = mean(occPsd(:, :, subj));
     tmpdxPsdAvg(subj, :) = mean(tmpdxPsd(:, :, subj));
     tmpsxPsdAvg(subj, :) = mean(tmpsxPsd(:, :, subj));
-
 end
 
 % Denormalizing the frequency range (implicitly normalized by the pwelch
@@ -140,7 +138,7 @@ xlabel('X'), ylabel('Y'), zlabel('Z')
 title('Electrode Positions')
 axis square
 
-%% PLOTTING AVERAGED TOPOGRAPHICAL MAPS
+%% PLOTTING SUBJECT AVERAGED TOPOGRAPHICAL MAPS
 %Computing the average over subjects
 avgBandSig = mean(psdBand, 3);
 figure
