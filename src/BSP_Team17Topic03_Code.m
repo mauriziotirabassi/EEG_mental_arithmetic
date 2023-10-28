@@ -29,6 +29,7 @@ Fs = 500; % Sampling frequency
 sigErr = 1000; % Number of samples to ignore
 dimW = 45; % Window length in seconds to approximate for stationarity
 freqBands = [1, 4, 8, 13, 20, 30, 40]; % Relevant frequency bands
+freqLabels = {'δ', 'θ', 'α', 'β1', 'β2', 'γ'};
 
 % Defining the vector of the electrode channels
 electrodes = strings(1, chanNum);
@@ -49,11 +50,11 @@ for subj = subjNum:-1:1
     frntNum = 7; prtNum = 6; occNum = 2; tmpdxNum = 2; tmpsxNum = 2;
 
     for electrode = 1:length(electrodes)
-        eTag = electrodes(electrode); % Electrode channel tag
+        etag = electrodes(electrode); % Electrode channel tag
 
         % Expliciting the signals in time domain
-        timeWork = myWorkData(subj).(eTag);
-        timeRest = myRestData(subj).(eTag);
+        timeWork = myWorkData(subj).(etag);
+        timeRest = myRestData(subj).(etag);
 
         % Trimming the time series to get rid of artifacts
         timeWork = timeWork(1:length(timeWork) - sigErr);
@@ -61,18 +62,22 @@ for subj = subjNum:-1:1
 
         % Selecting a limited window to approximate for stationarity
         % (dimW seconds centered in the signal median)
-        timeWork = timeWork(length(timeWork)/2 - Fs*(dimW/2) : length(timeWork)/2 + Fs*(dimW/2));
-        timeRest = timeRest(length(timeRest)/2 - Fs*(dimW/2) : length(timeRest)/2 + Fs*(dimW/2));
+        timeWork = timeWork(length(timeWork)/2 - Fs*(dimW/2) + 1 : length(timeWork)/2 + Fs*(dimW/2));
+        timeRest = timeRest(length(timeRest)/2 - Fs*(dimW/2) + 1 : length(timeRest)/2 + Fs*(dimW/2));
 
         % Saving the time signals into a data structure
-        workRecord(electrode, :, subj) = timeWork;
-        restRecord(electrode, :, subj) = timeRest;
+        workTimeRecord(electrode, :, subj) = timeWork;
+        restTimeRecord(electrode, :, subj) = timeRest;
 
         % Computing the PSD using the Welch method (specifics in references)
         [psdWork, hz] = pwelch(timeWork, hamming(Fs*10), Fs*0.1, Fs*10);
         [psdRest, ~] = pwelch(timeRest, hamming(Fs*10), Fs*0.1, Fs*10);
+
+        % Saving the power spectral densities into a data structure
+        workFreqRecord(electrode, :, subj) = psdWork;
+        restFreqRecord(electrode, :, subj) = psdRest;
         
-        % Normalizing the psds to highlight the differences between work
+        % Normalizing in order to highlight the differences between work
         % and rest conditions
         psdRatio(electrode, :, subj) = 10*log10(psdWork./psdRest);
 
@@ -94,19 +99,19 @@ for subj = subjNum:-1:1
         end
 
         % Dividing band channels among lobes for each subject
-        if(startsWith(eTag, 'F'))
+        if(startsWith(etag, 'F'))
             frntPsd(frntNum, :, subj) = psdBand(electrode, :, subj);
             frntNum = frntNum - 1;
-        elseif(startsWith(eTag, 'P') || startsWith(eTag, 'C'))
+        elseif(startsWith(etag, 'P') || startsWith(etag, 'C'))
             prtPsd(prtNum, :, subj) = psdBand(electrode, :, subj);
             prtNum = prtNum - 1;
-        elseif(startsWith(eTag, 'O'))
+        elseif(startsWith(etag, 'O'))
             occPsd(occNum, :, subj) = psdBand(electrode, :, subj);
             occNum = occNum - 1;
-        elseif(eTag == "T4" || eTag == "T6")
+        elseif(etag == "T4" || etag == "T6")
             tmpdxPsd(tmpdxNum, :, subj) = psdBand(electrode, :, subj);
             tmpdxNum = tmpdxNum - 1;
-        elseif(eTag == "T3" || eTag == "T5")
+        elseif(etag == "T3" || etag == "T5")
             tmpsxPsd(tmpsxNum, :, subj) = psdBand(electrode, :, subj);
             tmpsxNum = tmpsxNum - 1;
         end
@@ -135,8 +140,7 @@ for tmp = 1:length(electrodes)
 end
 
 xlabel('X'), ylabel('Y'), zlabel('Z')
-title('Electrode Positions')
-axis square
+title('Electrode Positions'), axis square
 
 %% PLOTTING SUBJECT AVERAGED TOPOGRAPHICAL MAPS
 %Computing the average over subjects
@@ -147,38 +151,67 @@ for freq = 1:(length(freqBands) - 1)
     topoplot(avgBandSig(:, freq), chanlocs, 'electrodes', 'labels', 'maplimits', [-20 20])
     colormap parula
     colorbar
-    title(['(' int2str(freqBands(freq)) '-' int2str(freqBands(freq + 1)) ')Hz'])
+    title(strcat(freqLabels(freq), ': (', int2str(freqBands(freq)), '-', int2str(freqBands(freq + 1)), ')Hz'))
 end
 
 %% BOXPLOT AVERAGE POWER OVER LOBES
 %TODO: comment
 figure
 subplot(2, 3, 1)
-boxplot(frntPsdAvg, 'labels', {'δ', 'θ', 'α', 'β1', 'β2', 'γ'})
+boxplot(frntPsdAvg, 'labels', freqLabels)
 title('Frontal'), ylabel('Average Power [dB]')
 
 subplot(2, 3, 2)
-boxplot(prtPsdAvg, 'labels', {'δ', 'θ', 'α', 'β1', 'β2', 'γ'})
+boxplot(prtPsdAvg, 'labels', freqLabels)
 title('Parietal'), ylabel('Average Power [dB]')
 
 subplot(2, 3, 3)
-boxplot(occPsdAvg, 'labels', {'δ', 'θ', 'α', 'β1', 'β2', 'γ'})
+boxplot(occPsdAvg, 'labels', freqLabels)
 title('Occipital'), ylabel('Average Power [dB]')
 
 subplot(2, 3, 4)
-boxplot(tmpdxPsdAvg, 'labels', {'δ', 'θ', 'α', 'β1', 'β2', 'γ'})
+boxplot(tmpdxPsdAvg, 'labels', freqLabels)
 title('Right Temporal'), ylabel('Average Power [dB]')
 
 subplot(2, 3, 5)
-boxplot(tmpsxPsdAvg, 'labels', {'δ', 'θ', 'α', 'β1', 'β2', 'γ'})
+boxplot(tmpsxPsdAvg, 'labels', freqLabels)
 title('Left Temporal'), ylabel('Average Power [dB]')
 
 %% COHERENCE BETWEEN CHANNELS
 for k = subjNum:-1:1
     for i = 1:length(electrodes)
         for j = 1:i
-            RestMSC(i,j,:,k)=mscohere(restRecord(i,:,k), restRecord(j,:,k),hamming(Fs*10), Fs*0.1, Fs*10);
-            WorkMSC(i,j,:,k)=mscohere(workRecord(i,:,k), workRecord(j,:,k),hamming(Fs*10), Fs*0.1, Fs*10);
+            RestMSC(i,j,:,k)=mscohere(restTimeRecord(i,:,k), restTimeRecord(j,:,k),hamming(Fs*10), Fs*0.1, Fs*10);
+            WorkMSC(i,j,:,k)=mscohere(workTimeRecord(i,:,k), workTimeRecord(j,:,k),hamming(Fs*10), Fs*0.1, Fs*10);
         end
     end
 end
+
+%% EXAMPLE OF TIME SERIER PREPROCESSING
+figure
+subj = 1; etag = 1; % Empirical
+subplot(2, 1, 1)
+sig = myWorkData(subj).(electrodes(1)); x = linspace(1, length(sig), length(sig));
+plot(x, sig), xlabel('Sample Number')
+title(strcat({'Subject '}, num2str(subj), {' '}, electrodes(etag), {' Work Before Processing'}))
+
+subplot(2, 1, 2)
+sig = workTimeRecord(1, :, 1); x = linspace(1, length(sig), length(sig));
+plot(x, sig), xlabel('Sample Number')
+title(strcat({'Subject '}, num2str(subj), {' '}, electrodes(etag), {' Work After Processing'}))
+
+%% EXAMPLE OF POWER SPECTRAL DENSITY NORMALIZATION
+% TODO: decidere unità di misura
+figure
+subj = 3; etag = 14; flim = 55; % Empirical
+sig1 = workFreqRecord(etag, :, subj); sig2 = restFreqRecord(etag, :, subj);
+
+% Plotting work and rest
+subplot(2, 1, 1), plot(hz, sig1), hold on, plot(hz, sig2)
+xlim([0 flim]), xlabel('Frequency [Hz]'), ylabel('Power Spectral Density [W/Hz]')
+title(strcat({'Subject '}, num2str(subj), {' '}, electrodes(etag), {' Work (Blue) and Rest (Red) PSDs'}))
+
+% Plotting ratio
+subplot(2, 1, 2), plot(hz, psdRatio(etag, :, subj)), xlim([0 flim])
+xlim([0 flim]), xlabel('Frequency [Hz]'), ylabel('Power Spectral Density [dB]')
+title(strcat({'Subject '}, num2str(subj), {' '}, electrodes(etag), {' Normalized Work PSD Over Rest'}))
