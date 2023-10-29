@@ -160,22 +160,32 @@ figure
 subplot(2, 3, 1)
 boxplot(frntPsdAvg, 'labels', freqLabels)
 title('Frontal'), ylabel('Average Power [dB]')
+hold on
+yline(0,'Color', 'black','LineWidth',2)
 
 subplot(2, 3, 2)
 boxplot(prtPsdAvg, 'labels', freqLabels)
 title('Parietal'), ylabel('Average Power [dB]')
+hold on
+yline(0,'Color', 'black','LineWidth',2)
 
 subplot(2, 3, 3)
 boxplot(occPsdAvg, 'labels', freqLabels)
 title('Occipital'), ylabel('Average Power [dB]')
+hold on
+yline(0,'Color', 'black','LineWidth',2)
 
 subplot(2, 3, 4)
 boxplot(tmpdxPsdAvg, 'labels', freqLabels)
 title('Right Temporal'), ylabel('Average Power [dB]')
+hold on
+yline(0,'Color', 'black','LineWidth',2)
 
 subplot(2, 3, 5)
 boxplot(tmpsxPsdAvg, 'labels', freqLabels)
 title('Left Temporal'), ylabel('Average Power [dB]')
+hold on
+yline(0,'Color', 'black','LineWidth',2)
 
 %% COHERENCE BETWEEN CHANNELS
 for k = subjNum:-1:1
