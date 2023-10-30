@@ -148,7 +148,7 @@ avgBandSig = mean(psdBand, 3);
 figure
 for freq = 1:(length(freqBands) - 1)
     subplot(2, 3, freq)
-    topoplot(avgBandSig(:, freq), chanlocs, 'electrodes', 'labels', 'maplimits', [-20 20])
+    topoplot(avgBandSig(:, freq), chanlocs, 'electrodes', 'labels', 'maplimits', [-20 20]);
     colormap parula
     colorbar
     title(strcat(freqLabels(freq), ': (', int2str(freqBands(freq)), '-', int2str(freqBands(freq + 1)), ')Hz'))
@@ -190,18 +190,13 @@ yline(0,'Color', 'black','LineWidth',2)
 %% COHERENCE BETWEEN CHANNELS
 for k = subjNum:-1:1
     for i = 1:length(electrodes)
-        for j = 1:length(electrodes)
-
-            if j==i
-                break
-            end
-
+        for j = 1:i
             RestMSC(i,j,:,k)=mscohere(restTimeRecord(i,:,k), restTimeRecord(j,:,k),hamming(Fs*10), Fs*0.1, Fs*10);
             WorkMSC(i,j,:,k)=mscohere(workTimeRecord(i,:,k), workTimeRecord(j,:,k),hamming(Fs*10), Fs*0.1, Fs*10);
         end
     end
 end
-
+%%
 RestMSCAvg=mean(RestMSC,4);
 WorkMSCAvg=mean(WorkMSC,4);
 RestMSCBand=zeros(chanNum,chanNum,length(freqBands) - 1);
