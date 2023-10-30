@@ -147,7 +147,6 @@ plot(x, sig), xlabel('Sample Number')
 title(strcat({'Subject '}, num2str(subj), {' '}, electrodes(etag), {' Work After Processing'}))
 
 %% EXAMPLE OF POWER SPECTRAL DENSITY BASELINE NORMALIZATION
-% TODO: decidere unità di misura
 figure
 subj = 3; etag = 14; flim = 55; % Empirical
 sig1 = workFreqRecord(etag, :, subj); sig2 = restFreqRecord(etag, :, subj);
@@ -192,27 +191,27 @@ figure
 subplot(2, 3, 1)
 boxplot(frntPsdAvg, 'labels', freqLabels)
 title('Frontal'), ylabel('Average Power [dB]')
-hold on, yline(0,'Color', 'black','LineWidth',2)
+hold on, yline(0,'Color', 'black','LineWidth', 2)
 
 subplot(2, 3, 2)
 boxplot(prtPsdAvg, 'labels', freqLabels)
 title('Parietal'), ylabel('Average Power [dB]')
-hold on, yline(0,'Color', 'black','LineWidth',2)
+hold on, yline(0,'Color', 'black','LineWidth', 2)
 
 subplot(2, 3, 3)
 boxplot(occPsdAvg, 'labels', freqLabels)
 title('Occipital'), ylabel('Average Power [dB]')
-hold on, yline(0,'Color', 'black','LineWidth',2)
+hold on, yline(0,'Color', 'black','LineWidth', 2)
 
 subplot(2, 3, 4)
 boxplot(tmpdxPsdAvg, 'labels', freqLabels)
 title('Right Temporal'), ylabel('Average Power [dB]')
-hold on, yline(0,'Color', 'black','LineWidth',2)
+hold on, yline(0,'Color', 'black','LineWidth', 2)
 
 subplot(2, 3, 5)
 boxplot(tmpsxPsdAvg, 'labels', freqLabels)
 title('Left Temporal'), ylabel('Average Power [dB]')
-hold on, yline(0,'Color', 'black','LineWidth',2)
+hold on, yline(0,'Color', 'black','LineWidth', 2)
 
 %% INTER-CHANNEL COHERENCE COMPUTATION
 % Computing inter-channel coherence both in working and resting conditions
@@ -226,21 +225,21 @@ for k = subjNum:-1:1
 end
 
 % Averaging across subjects
-restMSCAvg = mean(restMSC,4);
-workMSCAvg = mean(workMSC,4);
+restMSCAvg = mean(restMSC, 4);
+workMSCAvg = mean(workMSC, 4);
 
 % Averaging across relevant frequency bands
 restMSCBand = zeros(chanNum,chanNum,length(freqBands) - 1);
 workMSCBand = zeros(chanNum,chanNum,length(freqBands) - 1);
 
 for i=1:(length(freqBands) - 1)
-    restMSCBand(:,:,i) = mean(restMSCAvg(:,:,freqBands(i)*10+1:freqBands(i+1)*10+1), 3) - eye(length(electrodes));
-    workMSCBand(:,:,i) = mean(workMSCAvg(:,:,freqBands(i)*10+1:freqBands(i+1)*10+1), 3) - eye(length(electrodes));
+    restMSCBand(:,:,i) = mean(restMSCAvg(:, :, freqBands(i)*10+1:freqBands(i+1)*10+1), 3) - eye(length(electrodes));
+    workMSCBand(:,:,i) = mean(workMSCAvg(:, :, freqBands(i)*10+1:freqBands(i+1)*10+1), 3) - eye(length(electrodes));
 end
 
 %% INTER-CHANNEL WEAK COHERENCE
 cmp = parula(10000);
-thr = 5000;
+thr = 3000;
 
 % Weak Coherence During Rest
 figure('name','Weak Coherence During Rest')
@@ -259,20 +258,19 @@ for k=1:(length(freqBands) - 1)
     for i = 1:length(electrodes)
         for j = 1:length(electrodes)
             % Changing MSC order of magnitude
-            tmp = floor(restMSCBand(i,j,k)*10000) + 1;
+            tmp = floor(restMSCBand(i, j, k) * 10000) + 1;
             % Checking if the MSC between the two electrodes is under thr
             if i == j || tmp >= thr
                 break
             end
             % Rescaling for plotting color range
             tmp=tmp*2+1;
-            line([-chanlocs(i).Y;-chanlocs(j).Y], [chanlocs(i).X;chanlocs(j).X],'Color',cmp(tmp,:),'linewidth',1.25)
+            line([-chanlocs(i).Y; -chanlocs(j).Y], [chanlocs(i).X; chanlocs(j).X], 'Color', cmp(tmp,:), 'linewidth', 1.25)
             hold on
         end
     end
     xlabel('Left<--   -->Right'), ylabel('Back<--   -->Front')
     axis square, title(freqLabels(k)), colorbar
-
 end
 
 % Weak Coherence During Work
@@ -280,11 +278,11 @@ figure('name','Weak Coherence During Work')
 for k = 1:(length(freqBands) - 1)
     
     % Plotting topographical electrode location
-    subplot(2,3,k)
+    subplot(2, 3, k)
     plot(-[chanlocs.Y], [chanlocs.X], '.','color', 'k', 'MarkerSize', 15)
     hold on
     for tmp = 1:length(electrodes)
-        text(-chanlocs(tmp).Y +3, chanlocs(tmp).X, chanlocs(tmp).labels)
+        text(-chanlocs(tmp).Y + 3, chanlocs(tmp).X, chanlocs(tmp).labels)
     end
     hold on
 
@@ -292,14 +290,14 @@ for k = 1:(length(freqBands) - 1)
     for i = 1:length(electrodes)
         for j = 1:length(electrodes)
             % Changing MSC order of magnitude
-            tmp = floor(workMSCBand(i,j,k)*10000)+1;
+            tmp = floor(workMSCBand(i, j, k)*10000) + 1;
              % Checking if the MSC between the two electrodes is under thr
             if i == j || tmp >= thr
                 break
             end
             % Rescaling for plotting color range
-            tmp = tmp*2+1;
-            line([-chanlocs(i).Y;-chanlocs(j).Y],[chanlocs(i).X;chanlocs(j).X],'Color',cmp(tmp,:),'linewidth',1.25)
+            tmp = tmp * 2 + 1;
+            line([-chanlocs(i).Y; -chanlocs(j).Y], [chanlocs(i).X; chanlocs(j).X], 'Color', cmp(tmp,:), 'linewidth', 1.25)
             hold on
         end
     end
@@ -307,9 +305,9 @@ for k = 1:(length(freqBands) - 1)
     axis square, title(freqLabels(k)), colorbar
 end
 
-%% INTER-CHANNEL STRONG  COHERENCE
+%% INTER-CHANNEL STRONG COHERENCE
 cmp = parula(10000);
-thr = 5000;
+thr = 4000;
 
 % Strong Coherence During Rest
 figure('name','Strong Coherence During Rest')
@@ -320,7 +318,7 @@ for k=1:(length(freqBands) - 1)
     plot(-[chanlocs.Y], [chanlocs.X], '.','color', 'k', 'MarkerSize', 15)
     hold on
     for tmp = 1:length(electrodes)
-        text(-chanlocs(tmp).Y +3, chanlocs(tmp).X, chanlocs(tmp).labels)
+        text(-chanlocs(tmp).Y + 3, chanlocs(tmp).X, chanlocs(tmp).labels)
     end
     hold on
 
@@ -328,14 +326,14 @@ for k=1:(length(freqBands) - 1)
     for i = 1:length(electrodes)
         for j = 1:length(electrodes)
             % Changing MSC order of magnitude
-            tmp=floor(restMSCBand(i,j,k)*10000)+1;
+            tmp = floor(restMSCBand(i,j,k) * 10000) + 1;
              % Checking if the MSC between the two electrodes is over thr
             if i == j || tmp < thr
                 break
             end
             % Rescaling for plotting color range
-            tmp=(tmp-5000)*2+1;
-            line([-chanlocs(i).Y;-chanlocs(j).Y],[chanlocs(i).X;chanlocs(j).X],'Color',cmp(tmp,:),'linewidth',1.25)
+            tmp = (tmp - thr) * 2 + 1;
+            line([-chanlocs(i).Y; -chanlocs(j).Y], [chanlocs(i).X; chanlocs(j).X], 'Color', cmp(tmp,:), 'linewidth', 1.25)
             hold on
         end
     end
@@ -348,11 +346,11 @@ figure('name','Strong Coherence During Work')
 for k=1:(length(freqBands) - 1)
 
     % Plotting topographical electrode location
-    subplot(2,3,k)
+    subplot(2, 3, k)
     plot(-[chanlocs.Y], [chanlocs.X], '.','color', 'k', 'MarkerSize', 15)
     hold on
     for tmp = 1:length(electrodes)
-        text(-chanlocs(tmp).Y +3, chanlocs(tmp).X, chanlocs(tmp).labels)
+        text(-chanlocs(tmp).Y + 3, chanlocs(tmp).X, chanlocs(tmp).labels)
     end
     hold on
 
@@ -366,8 +364,8 @@ for k=1:(length(freqBands) - 1)
                 break
             end
             % Rescaling for plotting color range
-            tmp=(tmp-5000)*2+1;
-            line([-chanlocs(i).Y;-chanlocs(j).Y],[chanlocs(i).X;chanlocs(j).X],'Color',cmp(tmp,:),'linewidth',1.25)
+            tmp = (tmp - thr) * 2 + 1;
+            line([-chanlocs(i).Y; -chanlocs(j).Y], [chanlocs(i).X;chanlocs(j).X], 'Color', cmp(tmp,:), 'linewidth', 1.25)
             hold on
         end
     end

@@ -130,6 +130,37 @@ end
 % function)
 hz = hz*Fs/2/pi;
 
+%% EXAMPLE OF TIME SERIER PREPROCESSING
+figure
+subj = 1; etag = 1; % Empirical
+
+% Plotting time series before preprocessing
+subplot(2, 1, 1)
+sig = myWorkData(subj).(electrodes(1)); x = linspace(1, length(sig), length(sig));
+plot(x, sig), xlabel('Sample Number')
+title(strcat({'Subject '}, num2str(subj), {' '}, electrodes(etag), {' Work Before Processing'}))
+
+% Plotting time series after preprocessing
+subplot(2, 1, 2)
+sig = workTimeRecord(1, :, 1); x = linspace(1, length(sig), length(sig));
+plot(x, sig), xlabel('Sample Number')
+title(strcat({'Subject '}, num2str(subj), {' '}, electrodes(etag), {' Work After Processing'}))
+
+%% EXAMPLE OF POWER SPECTRAL DENSITY BASELINE NORMALIZATION
+figure
+subj = 3; etag = 14; flim = 55; % Empirical
+sig1 = workFreqRecord(etag, :, subj); sig2 = restFreqRecord(etag, :, subj);
+
+% Plotting work and rest
+subplot(2, 1, 1), plot(hz, sig1), hold on, plot(hz, sig2)
+xlim([0 flim]), xlabel('Frequency [Hz]'), ylabel('Power Spectral Density [W/Hz]')
+title(strcat({'Subject '}, num2str(subj), {' '}, electrodes(etag), {' Work (Blue) and Rest (Red) PSDs'}))
+
+% Plotting ratio
+subplot(2, 1, 2), plot(hz, psdRatio(etag, :, subj)), xlim([0 flim])
+xlim([0 flim]), xlabel('Frequency [Hz]'), ylabel('Power Spectral Density [dB]')
+title(strcat({'Subject '}, num2str(subj), {' '}, electrodes(etag), {' Normalized Work PSD Over Rest'}))
+
 %% 3D ELECTRODE LOCATION
 figure
 plot3([chanlocs.X], [chanlocs.Y], [chanlocs.Z], 'ko', 'MarkerFaceColor','k');
@@ -160,27 +191,27 @@ figure
 subplot(2, 3, 1)
 boxplot(frntPsdAvg, 'labels', freqLabels)
 title('Frontal'), ylabel('Average Power [dB]')
-hold on, yline(0,'Color', 'black','LineWidth',2)
+hold on, yline(0,'Color', 'black','LineWidth', 2)
 
 subplot(2, 3, 2)
 boxplot(prtPsdAvg, 'labels', freqLabels)
 title('Parietal'), ylabel('Average Power [dB]')
-hold on, yline(0,'Color', 'black','LineWidth',2)
+hold on, yline(0,'Color', 'black','LineWidth', 2)
 
 subplot(2, 3, 3)
 boxplot(occPsdAvg, 'labels', freqLabels)
 title('Occipital'), ylabel('Average Power [dB]')
-hold on, yline(0,'Color', 'black','LineWidth',2)
+hold on, yline(0,'Color', 'black','LineWidth', 2)
 
 subplot(2, 3, 4)
 boxplot(tmpdxPsdAvg, 'labels', freqLabels)
 title('Right Temporal'), ylabel('Average Power [dB]')
-hold on, yline(0,'Color', 'black','LineWidth',2)
+hold on, yline(0,'Color', 'black','LineWidth', 2)
 
 subplot(2, 3, 5)
 boxplot(tmpsxPsdAvg, 'labels', freqLabels)
 title('Left Temporal'), ylabel('Average Power [dB]')
-hold on, yline(0,'Color', 'black','LineWidth',2)
+hold on, yline(0,'Color', 'black','LineWidth', 2)
 
 %% INTER-CHANNEL COHERENCE COMPUTATION
 % Computing inter-channel coherence both in working and resting conditions
@@ -194,8 +225,8 @@ for k = subjNum:-1:1
 end
 
 % Averaging across subjects
-restMSCAvg = mean(restMSC,4);
-workMSCAvg = mean(workMSC,4);
+restMSCAvg = mean(restMSC, 4);
+workMSCAvg = mean(workMSC, 4);
 
 % Averaging across relevant frequency bands
 restMSCBand = zeros(chanNum,chanNum,length(freqBands) - 1);
@@ -208,7 +239,7 @@ end
 
 %% INTER-CHANNEL WEAK COHERENCE
 cmp = parula(10000);
-thr = 5000;
+thr = 3000;
 
 % Weak Coherence During Rest
 figure('name','Weak Coherence During Rest')
@@ -228,15 +259,13 @@ for k=1:(length(freqBands) - 1)
         for j = 1:length(electrodes)
             % Changing MSC order of magnitude
             tmp = floor(restMSCBand(i,j,k)*10000) + 1;
-
-            % Checking if the MSC between the two electrodes is lower than
-            % the chosen threshold
+            % Checking if the MSC between the two electrodes is under thr
             if i == j || tmp >= thr
                 break
             end
             % Rescaling for plotting color range
             tmp=tmp*2+1;
-            line([-chanlocs(i).Y;-chanlocs(j).Y], [chanlocs(i).X;chanlocs(j).X],'Color',cmp(tmp,:),'linewidth',1.25)
+            line([-chanlocs(i).Y;-chanlocs(j).Y], [chanlocs(i).X;chanlocs(j).X], 'Color', cmp(tmp,:), 'linewidth', 1.25)
             hold on
         end
     end
@@ -250,58 +279,26 @@ figure('name','Weak Coherence During Work')
 for k = 1:(length(freqBands) - 1)
     
     % Plotting topographical electrode location
-    subplot(2,3,k)
+    subplot(2, 3, k)
     plot(-[chanlocs.Y], [chanlocs.X], '.','color', 'k', 'MarkerSize', 15)
     hold on
     for tmp = 1:length(electrodes)
-        text(-chanlocs(tmp).Y +3, chanlocs(tmp).X, chanlocs(tmp).labels)
-    end
-    hold on
-
-    %plotting MSC
-    for i = 1:length(electrodes)
-        for j = 1:length(electrodes)
-            %using MSC value as index 
-            tmp = floor(workMSCBand(i,j,k)*10000)+1;
-            %check if the value has to be plotted or not
-            if i == j || tmp >= thr
-                break
-            end
-            % rescaling for plotting color range
-            tmp = tmp*2+1;
-            line([-chanlocs(i).Y;-chanlocs(j).Y],[chanlocs(i).X;chanlocs(j).X],'Color',cmp(tmp,:),'linewidth',1.25)
-            hold on
-        end
-    end
-    xlabel('Left<--   -->Right'), ylabel('Back<--   -->Front')
-    axis square, title(freqLabels(k)), colorbar
-end
-
-%% INTER-CHANNEL STRONG  COHERENCE
-% Strong Coherence During Rest
-figure('name','Strong Coherence During Rest')
-for k=1:(length(freqBands) - 1)
-    % Plotting the topographical template
-    subplot(2,3,k)
-    plot(-[chanlocs.Y], [chanlocs.X], '.','color', 'k', 'MarkerSize', 15)
-    hold on
-    for tmp = 1:length(electrodes)
-        text(-chanlocs(tmp).Y +3, chanlocs(tmp).X, chanlocs(tmp).labels)
+        text(-chanlocs(tmp).Y + 3, chanlocs(tmp).X, chanlocs(tmp).labels)
     end
     hold on
 
     % Plotting MSC
     for i = 1:length(electrodes)
         for j = 1:length(electrodes)
-            %using MSC value as index 
-            tmp=floor(restMSCBand(i,j,k)*10000)+1;
-            %check if the value has to be plotted or not
-            if i==j || tmp<5000
+            % Changing MSC order of magnitude
+            tmp = floor(workMSCBand(i,j,k)*10000)+1;
+             % Checking if the MSC between the two electrodes is under thr
+            if i == j || tmp >= thr
                 break
             end
-            %rescaling for plotting color range
-            tmp=(tmp-5000)*2+1;
-            line([-chanlocs(i).Y;-chanlocs(j).Y],[chanlocs(i).X;chanlocs(j).X],'Color',cmp(tmp,:),'linewidth',1.25)
+            % Rescaling for plotting color range
+            tmp = tmp * 2 + 1;
+            line([-chanlocs(i).Y; -chanlocs(j).Y], [chanlocs(i).X; chanlocs(j).X], 'Color', cmp(tmp,:), 'linewidth', 1.25)
             hold on
         end
     end
@@ -309,30 +306,35 @@ for k=1:(length(freqBands) - 1)
     axis square, title(freqLabels(k)), colorbar
 end
 
-figure('name','Strong coherence during work')
+%% INTER-CHANNEL STRONG COHERENCE
+cmp = parula(10000);
+thr = 3000;
+
+% Strong Coherence During Rest
+figure('name','Strong Coherence During Rest')
 for k=1:(length(freqBands) - 1)
 
-    %plotting template
+    % Plotting topographical electrode location
     subplot(2,3,k)
     plot(-[chanlocs.Y], [chanlocs.X], '.','color', 'k', 'MarkerSize', 15)
     hold on
     for tmp = 1:length(electrodes)
-        text(-chanlocs(tmp).Y +3, chanlocs(tmp).X, chanlocs(tmp).labels)
+        text(-chanlocs(tmp).Y + 3, chanlocs(tmp).X, chanlocs(tmp).labels)
     end
     hold on
 
-    %plotting MSC
+    % Plotting MSC
     for i = 1:length(electrodes)
         for j = 1:length(electrodes)
-            %using MSC value as index 
-            tmp = floor(restMSCBand(i,j,k)*10000)+1;
-            %check if the value has to be plotted or not
-            if i == j || tmp < 5000
+            % Changing MSC order of magnitude
+            tmp = floor(restMSCBand(i,j,k) * 10000) + 1;
+             % Checking if the MSC between the two electrodes is over thr
+            if i == j || tmp < thr
                 break
             end
-            %rescaling for plotting color range
-            tmp=(tmp-5000)*2+1;
-            line([-chanlocs(i).Y;-chanlocs(j).Y],[chanlocs(i).X;chanlocs(j).X],'Color',cmp(tmp,:),'linewidth',1.25)
+            % Rescaling for plotting color range
+            tmp = (tmp - thr) * 2 + 1;
+            line([-chanlocs(i).Y; -chanlocs(j).Y], [chanlocs(i).X; chanlocs(j).X], 'Color', cmp(tmp,:), 'linewidth', 1.25)
             hold on
         end
     end
@@ -340,34 +342,34 @@ for k=1:(length(freqBands) - 1)
     axis square, title(freqLabels(k)), colorbar
 end
 
-%% EXAMPLE OF TIME SERIER PREPROCESSING
-figure
-subj = 1; etag = 1; % Empirical
+% Strong Coherence During Work
+figure('name','Strong Coherence During Work')
+for k=1:(length(freqBands) - 1)
 
-% Plotting time series before preprocessing
-subplot(2, 1, 1)
-sig = myWorkData(subj).(electrodes(1)); x = linspace(1, length(sig), length(sig));
-plot(x, sig), xlabel('Sample Number')
-title(strcat({'Subject '}, num2str(subj), {' '}, electrodes(etag), {' Work Before Processing'}))
+    % Plotting topographical electrode location
+    subplot(2, 3, k)
+    plot(-[chanlocs.Y], [chanlocs.X], '.','color', 'k', 'MarkerSize', 15)
+    hold on
+    for tmp = 1:length(electrodes)
+        text(-chanlocs(tmp).Y + 3, chanlocs(tmp).X, chanlocs(tmp).labels)
+    end
+    hold on
 
-% Plotting time series after preprocessing
-subplot(2, 1, 2)
-sig = workTimeRecord(1, :, 1); x = linspace(1, length(sig), length(sig));
-plot(x, sig), xlabel('Sample Number')
-title(strcat({'Subject '}, num2str(subj), {' '}, electrodes(etag), {' Work After Processing'}))
-
-%% EXAMPLE OF POWER SPECTRAL DENSITY BASELINE NORMALIZATION
-% TODO: decidere unità di misura
-figure
-subj = 3; etag = 14; flim = 55; % Empirical
-sig1 = workFreqRecord(etag, :, subj); sig2 = restFreqRecord(etag, :, subj);
-
-% Plotting work and rest
-subplot(2, 1, 1), plot(hz, sig1), hold on, plot(hz, sig2)
-xlim([0 flim]), xlabel('Frequency [Hz]'), ylabel('Power Spectral Density [W/Hz]')
-title(strcat({'Subject '}, num2str(subj), {' '}, electrodes(etag), {' Work (Blue) and Rest (Red) PSDs'}))
-
-% Plotting ratio
-subplot(2, 1, 2), plot(hz, psdRatio(etag, :, subj)), xlim([0 flim])
-xlim([0 flim]), xlabel('Frequency [Hz]'), ylabel('Power Spectral Density [dB]')
-title(strcat({'Subject '}, num2str(subj), {' '}, electrodes(etag), {' Normalized Work PSD Over Rest'}))
+    % Plotting MSC
+    for i = 1:length(electrodes)
+        for j = 1:length(electrodes)
+            % Changing MSC order of magnitude
+            tmp = floor(restMSCBand(i,j,k)*10000)+1;
+             % Checking if the MSC between the two electrodes is over thr
+            if i == j || tmp < thr
+                break
+            end
+            % Rescaling for plotting color range
+            tmp = (tmp - thr) * 2 + 1;
+            line([-chanlocs(i).Y; -chanlocs(j).Y], [chanlocs(i).X;chanlocs(j).X], 'Color', cmp(tmp,:), 'linewidth', 1.25)
+            hold on
+        end
+    end
+    xlabel('Left<--   -->Right'), ylabel('Back<--   -->Front')
+    axis square, title(freqLabels(k)), colorbar
+end
