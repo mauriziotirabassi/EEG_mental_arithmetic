@@ -188,7 +188,7 @@ for freq = 1:(length(freqBands) - 1)
     title(strcat(freqLabels(freq), ': (', int2str(freqBands(freq)), '-', int2str(freqBands(freq + 1)), ')Hz'))
 end
 
-%% SUBJECT BAND POWER OVER LOBES BOXPLOTS
+%% BOXPLOTS: SUBJECT BAND POWER OVER LOBES
 figure
 subplot(2, 3, 1)
 boxplot(frntPsdAvg, 'labels', freqLabels)
@@ -257,8 +257,9 @@ end
 %% INTER-CHANNEL WEAK COHERENCE
 cmp = parula(10000);
 
-% Threshold choice based on previous histograms
-thr1 = 2000; thr2 = 4000;
+% Thresholds given by eye observation of previous histograms
+thr1 = 2000;
+thr2 = 4000;
 
 % Weak Coherence During Rest
 figure('name','Weak Coherence During Rest')
@@ -326,10 +327,6 @@ end
 
 
 %% INTER-CHANNEL STRONG COHERENCE
-cmp = parula(10000);
-
-% Threshold choice based on previous histograms
-thr1 = 2000; thr2 = 4000;
 
 % Strong Coherence During Rest
 figure('name','Strong Coherence During Rest')
