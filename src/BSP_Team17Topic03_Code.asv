@@ -69,7 +69,7 @@ for subj = subjNum:-1:1
 
         % Removing the signal mean
         timeWork = timeWork - mean(timeWork);
-        timeRest = timeRest - mean(timeRest);
+        t
 
         % Saving the time signals into a data structure
         workTimeRecord(electrode, :, subj) = timeWork;
