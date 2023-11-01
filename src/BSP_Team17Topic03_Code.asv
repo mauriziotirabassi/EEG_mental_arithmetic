@@ -1,0 +1,411 @@
+%% DATA EXTRACTION
+clear variables; close all; clc
+
+% Setting the path to the resources relatively to the running OS
+if isunix
+    path = '/Users/mattiapezzano/Documents/GitHub/proj-bsp-2023/src/Data/';
+else
+    path = 'Data\';
+end
+
+myFiles = dir(strcat(path, '*.mat')); % Loading the data files into a dir struct
+load(strcat(path, 'chanlocs.mat')); % Loading the file containing the specifics about the EEG
+
+subjNum = (length(myFiles) - 1)/2; % Number of subjects ("- 1" to exclude chanlocs.mat)
+
+% Iterating through the activity data (skipping the first element)
+for tmp = subjNum:-1:1 
+    filePath = strcat(path, myFiles(tmp * 2 - 1).name); % Odd spacing w/ given data
+    myWorkData(tmp) = load(filePath);
+end
+
+% Iterating through the rest data
+for tmp = subjNum:-1:1
+    filePath = strcat(path, myFiles(tmp * 2).name); % Even spacing w/ given data
+    myRestData(tmp) = load(filePath);
+end
+
+Fs = 500; % Sampling frequency
+sigErr = 1000; % Number of samples to ignore
+dimW = 45; % Window length in seconds to approximate for stationarity
+freqBands = [1, 4, 8, 13, 20, 30, 40]; % Relevant frequency bands
+freqLabels = {'δ', 'θ', 'α', 'β1', 'β2', 'γ'};
+bandNum = floor(length(freqBands) - 1); % Number of frequency bands
+
+% Defining the vector of the electrode channels
+chanNum = length(chanlocs) - 2; % Number of electrodes
+electrodes = strings(1, chanNum);
+for i = 1:chanNum
+    electrodes(i) = upper(chanlocs(i).labels);
+end
+
+%% DATA PREPROCESSING
+
+% Preallocating memory for the data structures containing the time series
+% for each electrode for each subject
+workBands = zeros(chanNum, bandNum, subjNum);
+restBands = zeros(chanNum, bandNum, subjNum);
+
+for subj = subjNum:-1:1
+
+    % Defining the number of electrode channels belonging to each lobe
+    frntNum = 7; prtNum = 6; occNum = 2; tmpdxNum = 2; tmpsxNum = 2;
+
+    for electrode = 1:chanNum
+        etag = electrodes(electrode); % Electrode channel tag
+
+        % Expliciting the signals in time domain
+        timeWork = myWorkData(subj).(etag);
+        timeRest = myRestData(subj).(etag);
+
+        % Trimming the time series to get rid of artifacts
+        timeWork = timeWork(1:length(timeWork) - sigErr);
+        timeRest = timeRest(1:length(timeRest) - sigErr);
+
+        % Extracting a dimW seconds window from the middle of the signals
+        % to approximate for stationarity
+        timeWork = timeWork(length(timeWork)/2 - Fs*(dimW/2) + 1 : length(timeWork)/2 + Fs*(dimW/2));
+        timeRest = timeRest(length(timeRest)/2 - Fs*(dimW/2) + 1 : length(timeRest)/2 + Fs*(dimW/2));
+
+        % Removing the signal mean
+        timeWork = timeWork - mean(timeWork);
+        timeRest = timeRest - mean(timeRest);
+
+        % Saving the time signals into a data structure
+        workTimeRecord(electrode, :, subj) = timeWork;
+        restTimeRecord(electrode, :, subj) = timeRest;
+
+        % Computing the PSD using the Welch method with a Hamming window
+        % (specifics in references)
+        [psdWork, hz] = pwelch(timeWork, hamming(Fs*10), Fs*0.1, Fs*10);
+        [psdRest, ~] = pwelch(timeRest, hamming(Fs*10), Fs*0.1, Fs*10);
+
+        % Saving the power spectral densities into a data structure
+        workFreqRecord(electrode, :, subj) = psdWork;
+        restFreqRecord(electrode, :, subj) = psdRest;
+        
+        % Normalizing the work power spectral density with respect to the
+        % baseline rest one and converting it to dB
+        psdRatio(electrode, :, subj) = 10*log10(psdWork./psdRest);
+
+        % Averaging over frequency bands of interest:
+        % delta(1-4)Hz, theta(4-8)Hz, alpha(8-13)Hz, 
+        % beta1(13-20)Hz, beta2(20-30)Hz, gamma(30-40)Hz
+        for freq = 1:bandNum
+
+            % Defining the frequency bands
+            startBand = freqBands(freq);
+            endBand = freqBands(freq + 1);
+
+            % Defining the integration intervals
+            intervalX = linspace(startBand, endBand, (endBand - startBand)*10 + 1);
+            intervalY = psdRatio(electrode, startBand*10 + 1: endBand*10 + 1, subj);
+
+            % Computing the mean frequency for every band for every subject
+            psdBand(electrode, freq, subj) = trapz(intervalX, intervalY);
+
+        end
+
+        % Dividing band channels among lobes for each subject
+        if(startsWith(etag, 'F'))
+            frntPsd(frntNum, :, subj) = psdBand(electrode, :, subj);
+            frntNum = frntNum - 1;
+        elseif(startsWith(etag, 'P') || startsWith(etag, 'C'))
+            prtPsd(prtNum, :, subj) = psdBand(electrode, :, subj);
+            prtNum = prtNum - 1;
+        elseif(startsWith(etag, 'O'))
+            occPsd(occNum, :, subj) = psdBand(electrode, :, subj);
+            occNum = occNum - 1;
+        elseif(etag == "T4" || etag == "T6")
+            tmpdxPsd(tmpdxNum, :, subj) = psdBand(electrode, :, subj);
+            tmpdxNum = tmpdxNum - 1;
+        elseif(etag == "T3" || etag == "T5")
+            tmpsxPsd(tmpsxNum, :, subj) = psdBand(electrode, :, subj);
+            tmpsxNum = tmpsxNum - 1;
+        end
+
+    end
+
+    % Computing the average frequency for each lobe for each subject
+    frntPsdAvg(subj, :) = mean(frntPsd(:, :, subj));
+    prtPsdAvg(subj, :) = mean(prtPsd(:, :, subj));
+    occPsdAvg(subj, :) = mean(occPsd(:, :, subj));
+    tmpdxPsdAvg(subj, :) = mean(tmpdxPsd(:, :, subj));
+    tmpsxPsdAvg(subj, :) = mean(tmpsxPsd(:, :, subj));
+
+end
+
+% Denormalizing the frequency range (implicitly normalized by the pwelch
+% function)
+hz = hz * Fs / 2 / pi;
+
+%% EXAMPLE OF TIME SERIER PREPROCESSING
+figure
+subj = 1; etag = 1; % Empirical
+
+% Plotting time series before preprocessing
+subplot(2, 1, 1)
+sig = myWorkData(subj).(electrodes(1)); x = linspace(1, length(sig), length(sig));
+plot(x, sig), xlabel('Sample Number')
+title(strcat({'Subject '}, num2str(subj), {' '}, electrodes(etag), {' Work Before Processing'}))
+
+% Plotting time series after preprocessing
+subplot(2, 1, 2)
+sig = workTimeRecord(1, :, 1); x = linspace(1, length(sig), length(sig));
+plot(x, sig), xlabel('Sample Number')
+title(strcat({'Subject '}, num2str(subj), {' '}, electrodes(etag), {' Work After Processing'}))
+
+%% EXAMPLE OF POWER SPECTRAL DENSITY BASELINE NORMALIZATION
+figure
+subj = 3; etag = 14; flim = 55; % Empirical
+sig1 = workFreqRecord(etag, :, subj); sig2 = restFreqRecord(etag, :, subj);
+
+% Plotting work and rest
+subplot(2, 1, 1), plot(hz, sig1), hold on, plot(hz, sig2)
+xlim([0 flim]), xlabel('Frequency [Hz]'), ylabel('Power Spectral Density [W/Hz]')
+title(strcat({'Subject '}, num2str(subj), {' '}, electrodes(etag), {' Work (Blue) and Rest (Red) PSDs'}))
+
+% Plotting ratio
+subplot(2, 1, 2), plot(hz, psdRatio(etag, :, subj)), xlim([0 flim])
+xlim([0 flim]), xlabel('Frequency [Hz]'), ylabel('Power Spectral Density [dB]')
+title(strcat({'Subject '}, num2str(subj), {' '}, electrodes(etag), {' Normalized Work PSD Over Rest'}))
+
+%% 3D ELECTRODE LOCATION
+figure
+plot3([chanlocs.X], [chanlocs.Y], [chanlocs.Z], 'ko', 'MarkerFaceColor','k');
+
+% Labelling the electrodes
+hold on
+for tmp = 1:chanNum
+    text(chanlocs(tmp).X + 3, chanlocs(tmp).Y, chanlocs(tmp).Z, chanlocs(tmp).labels)
+end
+
+xlabel('X'), ylabel('Y'), zlabel('Z')
+title('Electrode Positions'), axis square
+
+%% SUBJECT AVERAGED TOPOGRAPHICAL MAPS
+
+% Computing the average over subjects
+avgBandSig = mean(psdBand, 3);
+
+% Topoplotting
+figure
+for freq = 2:bandNum - 1
+    subplot(2, 2, freq - 1)
+    %subplot(2, 3, freq)
+    topoplot(avgBandSig(:, freq), chanlocs, 'electrodes', 'labels', 'maplimits', [-20 20]);
+    colormap parula
+    colorbar
+    title(strcat(freqLabels(freq), ': (', int2str(freqBands(freq)), '-', int2str(freqBands(freq + 1)), ')Hz'))
+end
+
+%% SUBJECT BAND POWER OVER LOBES BOXPLOTS
+figure
+subplot(2, 3, 1)
+boxplot(frntPsdAvg, 'labels', freqLabels)
+title('Frontal'), ylabel('Average Power [dB]')
+hold on, yline(0,'Color', 'black','LineWidth', 2)
+
+subplot(2, 3, 2)
+boxplot(prtPsdAvg, 'labels', freqLabels)
+title('Parietal'), ylabel('Average Power [dB]')
+hold on, yline(0,'Color', 'black','LineWidth', 2)
+
+subplot(2, 3, 3)
+boxplot(occPsdAvg, 'labels', freqLabels)
+title('Occipital'), ylabel('Average Power [dB]')
+hold on, yline(0,'Color', 'black','LineWidth', 2)
+
+subplot(2, 3, 4)
+boxplot(tmpdxPsdAvg, 'labels', freqLabels)
+title('Right Temporal'), ylabel('Average Power [dB]')
+hold on, yline(0,'Color', 'black','LineWidth', 2)
+
+subplot(2, 3, 5)
+boxplot(tmpsxPsdAvg, 'labels', freqLabels)
+title('Left Temporal'), ylabel('Average Power [dB]')
+hold on, yline(0,'Color', 'black','LineWidth', 2)
+
+%% INTER-CHANNEL COHERENCE COMPUTATION
+
+% Computing inter-channel coherence both in working and resting conditions
+for k = subjNum:-1:1
+    for i = 1:chanNum
+        for j = 1:i
+            restMSC(i,j,:,k)=mscohere(restTimeRecord(i,:,k), restTimeRecord(j,:,k),hamming(Fs*10), Fs*0.1, Fs*10);
+            workMSC(i,j,:,k)=mscohere(workTimeRecord(i,:,k), workTimeRecord(j,:,k),hamming(Fs*10), Fs*0.1, Fs*10);
+        end
+    end
+end
+
+% Averaging across subjects
+restMSCAvg = mean(restMSC, 4);
+workMSCAvg = mean(workMSC, 4);
+
+% Averaging across relevant frequency bands
+restMSCBand = zeros(chanNum, chanNum, bandNum);
+workMSCBand = zeros(chanNum, chanNum, bandNum);
+
+for i = 1:bandNum
+    restMSCBand(:,:,i) = mean(restMSCAvg(:, :, freqBands(i)*10+1:freqBands(i+1)*10+1), 3) - eye(chanNum);
+    workMSCBand(:,:,i) = mean(workMSCAvg(:, :, freqBands(i)*10+1:freqBands(i+1)*10+1), 3) - eye(chanNum);
+end
+
+%% INTER-CHANNEL COHERENCE HISTOGRAMS
+
+% Histogram on inter-channel coherence in resting conditions
+figure('name', 'Rest Inter-Channel Coherence')
+for i = 1:bandNum
+    subplot (2, 3, i)
+    histogram(nonzeros(squeeze(restMSCBand(:, :, i))), 51)
+end
+
+% Histogram on inter-channel coherence in working conditions
+figure('name', 'Work Inter-Channel Coherence')
+for i = 1:bandNum
+    subplot (2, 3, i)
+    histogram(nonzeros(squeeze(workMSCBand(:, :, i))), 51)
+end
+
+%% INTER-CHANNEL WEAK COHERENCE
+cmp = parula(10000);
+
+% Threshold choice based on previous histograms
+thr1 = 2000; thr2 = 4000;
+
+% Weak Coherence During Rest
+figure('name','Weak Coherence During Rest')
+for k = 1:bandNum
+
+    % Plotting topographical electrode location
+    subplot(2, 3, k)
+    plot(-[chanlocs.Y], [chanlocs.X], '.','color', 'k', 'MarkerSize', 15)
+    hold on
+    for tmp = 1:chanNum
+        text(-chanlocs(tmp).Y + 3, chanlocs(tmp).X, chanlocs(tmp).labels)
+    end
+    hold on
+
+    % Plotting MSC
+    for i = 1:chanNum
+        for j = 1:chanNum
+            % Changing MSC order of magnitude
+            tmp = floor(restMSCBand(i, j, k) * 10000) + 1;
+            % Checking if the MSC between the two electrodes is in target range
+            if i == j || tmp<thr1 || tmp>=thr2
+                break
+            end
+            % Rescaling for plotting color range
+            tmp = floor((tmp-thr1)*(10000-1)/(thr2-1-thr1)+1);
+            line([-chanlocs(i).Y; -chanlocs(j).Y], [chanlocs(i).X; chanlocs(j).X], 'Color', cmp(tmp,:), 'linewidth', 1.25)
+            hold on
+        end
+    end
+    xlabel('Left<--   -->Right'), ylabel('Back<--   -->Front')
+    axis square, title(freqLabels(k)), colorbar, clim([thr1 thr2]./10000)
+end
+
+% Weak Coherence During Work
+figure('name','Weak Coherence During Work')
+for k = 1:bandNum
+
+    % Plotting topographical electrode location
+    subplot(2, 3, k)
+    plot(-[chanlocs.Y], [chanlocs.X], '.','color', 'k', 'MarkerSize', 15)
+    hold on
+    for tmp = 1:chanNum
+        text(-chanlocs(tmp).Y + 3, chanlocs(tmp).X, chanlocs(tmp).labels)
+    end
+    hold on
+
+    % Plotting MSC
+    for i = 1:chanNum
+        for j = 1:chanNum
+            % Changing MSC order of magnitude
+            tmp = floor(workMSCBand(i, j, k) * 10000) + 1;
+            % Checking if the MSC between the two electrodes is in target range
+            if i == j || tmp<thr1 || tmp>=thr2
+                break
+            end
+            % Rescaling for plotting color range
+            tmp = floor((tmp - thr1) * (10000 - 1) / (thr2 - 1 - thr1) + 1);
+            line([-chanlocs(i).Y; -chanlocs(j).Y], [chanlocs(i).X; chanlocs(j).X], 'Color', cmp(tmp,:), 'linewidth', 1.25)
+            hold on
+        end
+    end
+    xlabel('Left<--   -->Right'), ylabel('Back<--   -->Front')
+    axis square, title(freqLabels(k)), colorbar, clim([thr1 thr2]./10000)
+end
+
+
+%% INTER-CHANNEL STRONG COHERENCE
+cmp = parula(10000);
+
+% Threshold choice based on previous histograms
+thr1 = 2000; thr2 = 4000;
+
+% Strong Coherence During Rest
+figure('name','Strong Coherence During Rest')
+for k = 1:bandNum
+
+    % Plotting topographical electrode location
+    subplot(2,3,k)
+    plot(-[chanlocs.Y], [chanlocs.X], '.','color', 'k', 'MarkerSize', 15)
+    hold on
+    for tmp = 1:length(electrodes)
+        text(-chanlocs(tmp).Y + 3, chanlocs(tmp).X, chanlocs(tmp).labels)
+    end
+    hold on
+
+    % Plotting MSC
+    for i = 1:chanNum
+        for j = 1:chanNum
+            % Changing MSC order of magnitude
+            tmp = floor(restMSCBand(i,j,k) * 10000) + 1;
+             % Checking if the MSC between the two electrodes is in target
+             % range
+            if i == j || tmp < thr2
+                break
+            end
+            % Rescaling for plotting color range
+            tmp = floor((tmp - thr2) * (10000 - 1) / (10000 - thr2) + 1);
+            line([-chanlocs(i).Y; -chanlocs(j).Y], [chanlocs(i).X; chanlocs(j).X], 'Color', cmp(tmp,:), 'linewidth', 1.25)
+            hold on
+        end
+    end
+    xlabel('Left<--   -->Right'), ylabel('Back<--   -->Front')
+    axis square, title(freqLabels(k)), colorbar, clim([thr2 10000]./10000)
+end
+
+% Strong Coherence During Work
+figure('name','Strong Coherence During Work')
+for k = 1:bandNum
+
+    % Plotting topographical electrode location
+    subplot(2, 3, k)
+    plot(-[chanlocs.Y], [chanlocs.X], '.','color', 'k', 'MarkerSize', 15)
+    hold on
+    for tmp = 1:length(electrodes)
+        text(-chanlocs(tmp).Y + 3, chanlocs(tmp).X, chanlocs(tmp).labels)
+    end
+    hold on
+
+    % Plotting MSC
+    for i = 1:chanNum
+        for j = 1:chanNum
+            % Changing MSC order of magnitude
+            tmp = floor(workMSCBand(i, j, k) * 10000) + 1;
+            % Checking if the MSC between the two electrodes is in target
+            % range
+            if i == j || tmp < thr2
+                break
+            end
+            % Rescaling for plotting color range
+            tmp = floor((tmp - thr2) * (10000 - 1) / (10000 - thr2) + 1);
+            line([-chanlocs(i).Y; -chanlocs(j).Y], [chanlocs(i).X; chanlocs(j).X], 'Color', cmp(tmp,:), 'linewidth', 1.25)
+            hold on
+        end
+    end
+    xlabel('Left<--   -->Right'), ylabel('Back<--   -->Front')
+    axis square, title(freqLabels(k)), colorbar, clim([thr2 10000]./10000)
+end
