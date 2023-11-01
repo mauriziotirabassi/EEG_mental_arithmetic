@@ -62,8 +62,8 @@ for subj = subjNum:-1:1
         timeWork = timeWork(1:length(timeWork) - sigErr);
         timeRest = timeRest(1:length(timeRest) - sigErr);
 
-        % Selecting a limited window to approximate for stationarity
-        % (dimW seconds centered in the signal middle)
+        % Extracting a dimW seconds window from the middle of the signals
+        % to approximate for stationarity
         timeWork = timeWork(length(timeWork)/2 - Fs*(dimW/2) + 1 : length(timeWork)/2 + Fs*(dimW/2));
         timeRest = timeRest(length(timeRest)/2 - Fs*(dimW/2) + 1 : length(timeRest)/2 + Fs*(dimW/2));
 
@@ -75,7 +75,8 @@ for subj = subjNum:-1:1
         workTimeRecord(electrode, :, subj) = timeWork;
         restTimeRecord(electrode, :, subj) = timeRest;
 
-        % Computing the PSD using the Welch method (specifics in references)
+        % Computing the PSD using the Welch method with a Hamming window
+        % (specifics in references)
         [psdWork, hz] = pwelch(timeWork, hamming(Fs*10), Fs*0.1, Fs*10);
         [psdRest, ~] = pwelch(timeRest, hamming(Fs*10), Fs*0.1, Fs*10);
 
@@ -83,11 +84,11 @@ for subj = subjNum:-1:1
         workFreqRecord(electrode, :, subj) = psdWork;
         restFreqRecord(electrode, :, subj) = psdRest;
         
-        % Normalizing in order to highlight the differences between work
-        % and rest conditions
+        % Normalizing the work power spectral density with respect to the
+        % baseline rest one and converting it to dB
         psdRatio(electrode, :, subj) = 10*log10(psdWork./psdRest);
 
-        % Averaging over bands of interest:
+        % Averaging over frequency bands of interest:
         % delta(1-4)Hz, theta(4-8)Hz, alpha(8-13)Hz, 
         % beta1(13-20)Hz, beta2(20-30)Hz, gamma(30-40)Hz
         for freq = 1:bandNum
@@ -102,6 +103,7 @@ for subj = subjNum:-1:1
 
             % Computing the mean frequency for every band for every subject
             psdBand(electrode, freq, subj) = trapz(intervalX, intervalY);
+
         end
 
         % Dividing band channels among lobes for each subject
@@ -121,6 +123,7 @@ for subj = subjNum:-1:1
             tmpsxPsd(tmpsxNum, :, subj) = psdBand(electrode, :, subj);
             tmpsxNum = tmpsxNum - 1;
         end
+
     end
 
     % Computing the average frequency for each lobe for each subject
@@ -129,11 +132,12 @@ for subj = subjNum:-1:1
     occPsdAvg(subj, :) = mean(occPsd(:, :, subj));
     tmpdxPsdAvg(subj, :) = mean(tmpdxPsd(:, :, subj));
     tmpsxPsdAvg(subj, :) = mean(tmpsxPsd(:, :, subj));
+
 end
 
 % Denormalizing the frequency range (implicitly normalized by the pwelch
 % function)
-hz = hz*Fs/2/pi;
+hz = hz * Fs / 2 / pi;
 
 %% EXAMPLE OF TIME SERIER PREPROCESSING
 figure
@@ -180,11 +184,13 @@ xlabel('X'), ylabel('Y'), zlabel('Z')
 title('Electrode Positions'), axis square
 
 %% SUBJECT AVERAGED TOPOGRAPHICAL MAPS
+
 % Computing the average over subjects
 avgBandSig = mean(psdBand, 3);
+
 % Topoplotting
 figure
-for freq = 1:(length(freqBands) - 1)
+for freq = 1:bandNum
     subplot(2, 3, freq)
     topoplot(avgBandSig(:, freq), chanlocs, 'electrodes', 'labels', 'maplimits', [-20 20]);
     colormap parula
@@ -220,6 +226,7 @@ title('Left Temporal'), ylabel('Average Power [dB]')
 hold on, yline(0,'Color', 'black','LineWidth', 2)
 
 %% INTER-CHANNEL COHERENCE COMPUTATION
+
 % Computing inter-channel coherence both in working and resting conditions
 for k = subjNum:-1:1
     for i = 1:chanNum
@@ -244,6 +251,7 @@ for i = 1:bandNum
 end
 
 %% INTER-CHANNEL COHERENCE HISTOGRAMS
+
 % Histogram on inter-channel coherence in resting conditions
 figure('name', 'Rest Inter-Channel Coherence')
 for i = 1:bandNum
