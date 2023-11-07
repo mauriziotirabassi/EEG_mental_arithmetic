@@ -15,13 +15,13 @@ subjNum = (length(myFiles) - 1)/2; % Number of subjects ("- 1" to exclude chanlo
 
 % Iterating through the activity data (skipping the first element)
 for tmp = subjNum:-1:1 
-    filePath = strcat(path, myFiles(tmp * 2 - 1).name); % Odd spacing w/ given data
+    filePath = strcat(path, myFiles(tmp * 2).name); % Odd spacing w/ given data
     myWorkData(tmp) = load(filePath);
 end
 
 % Iterating through the rest data
 for tmp = subjNum:-1:1
-    filePath = strcat(path, myFiles(tmp * 2).name); % Even spacing w/ given data
+    filePath = strcat(path, myFiles(tmp * 2 - 1).name); % Even spacing w/ given data
     myRestData(tmp) = load(filePath);
 end
 
